@@ -1,0 +1,44 @@
+---
+import logo from '../assets/logo_denshattack_terminal.png';
+
+const links = [
+  { label: 'Skips', href: '/' },
+  { label: 'Mods', href: '/mods' },
+  { label: 'Tools', href: '/tools' },
+  { label: 'Stickers', href: '/stickers' },
+];
+
+const path = Astro.url.pathname;
+---
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="site-header__logo" href="/">
+      <img
+        class="site-header__logo-img"
+        src={logo.src}
+        width={logo.width}
+        height={logo.height}
+        alt="Denshattack Terminal"
+      />
+    </a>
+
+    <nav class="site-header__nav" aria-label="Main navigation">
+      <ul class="site-header__nav-list">
+        {
+          links.map((l) => (
+            <li class="site-header__nav-item">
+              <a
+                class="site-header__nav-link"
+                href={l.href}
+                aria-current={path === l.href || path === `${l.href}/` ? 'page' : undefined}
+              >
+                {l.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </div>
+</header>

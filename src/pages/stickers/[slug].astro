@@ -1,0 +1,71 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getStickers } from '../../lib/wp.js';
+
+/**
+ * One static page per sticker.
+ * getStaticPaths runs once at build time and returns every route to generate.
+ */
+export async function getStaticPaths() {
+  const stickers = await getStickers();
+
+  return stickers.map((s) => ({
+    params: { slug: s.slug },
+    props: { sticker: s },
+  }));
+}
+
+const { sticker: s } = Astro.props;
+---
+
+<Base title={s.title} description={s.artist ? `By ${s.artist}` : ''}>
+  <main class="sticker-page">
+    <p class="breadcrumb"><a href="/stickers/">Back to stickers</a></p>
+
+    <article>
+      <h1 class="detail__title">{s.title}</h1>
+
+      <dl class="detail__meta">
+        {s.artist && (
+          <>
+            <dt>Artist</dt>
+            <dd>{s.artist}</dd>
+          </>
+        )}
+        {s.tags.length > 0 && (
+          <>
+            <dt>Tags</dt>
+            <dd>{s.tags.join(', ')}</dd>
+          </>
+        )}
+      </dl>
+
+      {s.screenshot && (
+        <img
+          class="detail__media"
+          src={s.screenshot}
+          alt={s.screenshotAlt || ''}
+        />
+      )}
+
+      {s.image && (
+        <div class="detail__download">
+          <img
+            class="detail__download-preview"
+            src={s.image}
+            alt={s.imageAlt || ''}
+          />
+          {/*
+            `download` only forces a save when the file is same-origin.
+            here it points at the WordPress media host, so browsers fall
+            back to opening the image in a new tab, which still lets the
+            visitor save it manually.
+          */}
+          <a class="btn" href={s.image} download target="_blank" rel="noopener">
+            Download sticker
+          </a>
+        </div>
+      )}
+    </article>
+  </main>
+</Base>

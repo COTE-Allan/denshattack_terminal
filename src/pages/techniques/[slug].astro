@@ -1,0 +1,84 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getTechniques } from '../../lib/wp.js';
+
+/**
+ * One static page per technique.
+ * getStaticPaths runs once at build time and returns every route to generate.
+ */
+export async function getStaticPaths() {
+  const techniques = await getTechniques();
+
+  return techniques.map((t) => ({
+    params: { slug: t.slug },
+    props: { technique: t },
+  }));
+}
+
+const { technique: t } = Astro.props;
+---
+
+<Base title={t.title} description={t.summary}>
+  <main class="technique-page">
+    <p class="breadcrumb"><a href="/">Back to catalogue</a></p>
+
+    <article>
+      <h1>{t.title}</h1>
+
+      <dl class="technique-page__meta">
+        {t.difficulty > 0 && (
+          <>
+            <dt>Difficulty</dt>
+            <dd>{t.difficulty}/5</dd>
+          </>
+        )}
+        {t.timeSave != null && (
+          <>
+            <dt>Time save</dt>
+            <dd>{t.timeSave}s</dd>
+          </>
+        )}
+        {t.inputWindow && (
+          <>
+            <dt>Input window</dt>
+            <dd>{t.inputWindow}</dd>
+          </>
+        )}
+        {t.gameVersion && (
+          <>
+            <dt>Version</dt>
+            <dd>{t.gameVersion}</dd>
+          </>
+        )}
+        {t.status && (
+          <>
+            <dt>Status</dt>
+            <dd data-status={t.status}>{t.status}</dd>
+          </>
+        )}
+      </dl>
+
+      {t.categories.length > 0 && (
+        <ul class="technique-page__tags">
+          {t.categories.map((c) => <li>{c}</li>)}
+        </ul>
+      )}
+
+      {/*
+        set:html renders the WordPress editor output as real HTML.
+        Safe here because this content only ever comes from the admin;
+        community submissions are stripped of all tags server-side and
+        still have to be approved before they reach a build.
+      */}
+      <div class="technique-page__body" set:html={t.content} />
+
+      {t.videoUrl && (
+        <p class="technique-page__video">
+          <a href={t.videoUrl} target="_blank" rel="noopener nofollow">
+            Watch the demonstration
+          </a>
+        </p>
+      )}
+    </article>
+  </main>
+</Base>

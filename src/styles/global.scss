@@ -1,0 +1,581 @@
+@use 'variables' as *;
+
+// ---- Reset -----------------------------------------------------------
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  // A very faint yellow glow at the top of the page (sits behind the header,
+  // which paints its own opaque background so it just frames it), plus a
+  // halftone of yellow dots creeping in from both screen edges. Every dot
+  // shares the same opacity, only its radius shrinks toward the content.
+  background-color: $color-bg;
+  background-image:
+    radial-gradient(ellipse 900px 320px at 50% 0%, rgba($color-border, 0.08), transparent 70%),
+    url('/decor/dot-fade-left.svg'),
+    url('/decor/dot-fade-right.svg');
+  background-repeat: no-repeat, repeat-y, repeat-y;
+  background-position: top center, left top, right top;
+  color: $color-text;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+}
+
+// Decorative sticker, anchored to the bottom-right of the page (not the
+// viewport: no positioned ancestor, so it sits at the bottom of the full
+// document and scrolls away with the content, like the dot pattern).
+.page-sticker {
+  position: absolute;
+  right: 2.5rem;
+  bottom: 2.5rem;
+  width: 400px;
+  max-width: 90vw;
+  height: auto;
+  transform: rotate(-8deg);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 30%;
+}
+
+// Below tablet width there just isn't room for these decorations without
+// them overlapping real content, so drop them rather than fight for space.
+@media (max-width: 900px) {
+  body {
+    background-image: radial-gradient(
+      ellipse 900px 320px at 50% 0%,
+      rgba($color-border, 0.08),
+      transparent 70%
+    );
+    background-repeat: no-repeat;
+    background-position: top center;
+  }
+
+  .page-sticker {
+    display: none;
+  }
+}
+
+a {
+  color: inherit;
+}
+
+main {
+  max-width: $max-width;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+// ---- Header ------------------------------------------------------------
+
+// A rounded pill sharing the same max-width/gutters as the page content,
+// instead of a full-bleed bar, floating free with room around it. Sticky so
+// it stays reachable while scrolling; the top padding is what keeps the gap
+// above it once stuck.
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 1.75rem 1.5rem 0;
+}
+
+.site-header__inner {
+  max-width: $max-width;
+  margin: 0 auto;
+  padding: 0.85rem 1.75rem;
+  background: $color-bg-header;
+  border: 2px solid $color-border-subtle;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.site-header__logo {
+  display: inline-flex;
+  align-items: center;
+}
+
+.site-header__logo-img {
+  display: block;
+  height: 3rem;
+  width: auto;
+  transition: transform 0.15s ease, filter 0.15s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 5px rgba($color-border, 0.15));
+  }
+}
+
+.site-header__nav-list {
+  list-style: none;
+  display: flex;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+}
+
+.site-header__nav-link {
+  display: inline-block;
+  text-decoration: none;
+  color: $color-text-muted;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    color: $color-border;
+    background-color: rgba($color-border, 0.15);
+  }
+
+  &[aria-current='page'] {
+    color: $color-border;
+  }
+}
+
+// Below this width the logo + all four nav links no longer fit on one line
+// without overflowing, so stack them instead, both centered, and relax the
+// pill into a plain rounded rect since a 999px radius looks odd once the
+// box is taller than it is wide.
+@media (max-width: 720px) {
+  .site-header__inner {
+    flex-direction: column;
+    justify-content: center;
+    border-radius: $radius * 2;
+    padding: 1.25rem;
+  }
+
+  .site-header__logo {
+    justify-content: center;
+  }
+
+  .site-header__nav-list {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+// ---- Catalog / filters ---------------------------------------------------
+
+.catalog__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.filter__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $color-text-muted;
+}
+
+.filter__input,
+.filter__select {
+  background: $color-card-bg;
+  border: 1px solid $color-border-subtle;
+  border-radius: 999px;
+  color: $color-text;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+
+  &:focus {
+    outline: none;
+    border-color: $color-border;
+  }
+}
+
+.filter__reset {
+  background: transparent;
+  border: 1px solid $color-border;
+  color: $color-border;
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: $color-border;
+    color: #1a1a1a;
+  }
+}
+
+.catalog__count {
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  margin: 0 0 1rem;
+}
+
+.catalog__empty {
+  color: $color-text-muted;
+}
+
+// ---- Catalogue cards ---------------------------------------------------
+// Shared by every catalogue (skips, stickers, ...) via the <Card> component.
+
+.catalog__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  align-items: start; // cards keep their own height, don't stretch to match tallest sibling
+  gap: 1.5rem;
+}
+
+.card {
+  background: $color-card-bg;
+  border: 3px solid $color-border;
+  border-radius: $radius;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    background: $color-card-bg-hover;
+    box-shadow: 0 10px 24px rgba($color-border, 0.15);
+  }
+}
+
+.card__link {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+}
+
+// Bleeds to the card edges so the thumbnail fills the top of the card.
+// Radius is inset by the border width so it nests inside the card's own
+// rounded corners instead of poking past them.
+.card__media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  margin: -1.25rem -1.25rem 0.75rem;
+  border-radius: calc(#{$radius} - 2px) calc(#{$radius} - 2px) 0 0;
+  background: #000;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.card__media-thumb {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+  object-fit: cover;
+}
+
+.card__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.card__title {
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+  color: $color-text;
+}
+
+.card__summary {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+  line-height: 1.5;
+  margin: 0;
+  height: 3.825rem; // 3 lines, so every card lines up regardless of summary length
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.card__meta {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.35rem 0.75rem;
+}
+
+.card__meta-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: $color-text-muted;
+  margin: 0 0.3rem 0 0;
+}
+
+.card__meta-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: $color-border;
+  margin: 0;
+}
+
+.card__stars,
+.card__timesave {
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+}
+
+// ---- Detail pages (skip, sticker, ...) ----------------------------------
+// Structural classes (.detail__*) are shared; each page keeps its own
+// content-specific bits (video embed, sticker download) alongside them.
+
+.breadcrumb {
+  margin: 0 0 1.5rem;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: $color-text-muted;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: color 0.15s ease;
+
+    &::before {
+      content: '←';
+    }
+
+    &:hover {
+      color: $color-border;
+    }
+  }
+}
+
+.detail__title {
+  font-size: 1.85rem;
+  margin: 0 0 1rem;
+  color: $color-text;
+}
+
+.detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1.75rem;
+  margin: 0 0 1.75rem;
+  padding: 0;
+
+  dt {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $color-text-muted;
+    margin: 0 0.4rem 0 0;
+  }
+
+  dd {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: $color-border;
+    margin: 0;
+  }
+}
+
+// WYSIWYG content from the WordPress editor (set:html): basic prose rhythm.
+.detail__body {
+  color: $color-text;
+  line-height: 1.7;
+  margin: 0 0 1.75rem;
+
+  p {
+    margin: 0 0 1rem;
+  }
+
+  a {
+    color: $color-border;
+    text-decoration: underline;
+  }
+
+  img {
+    max-width: 100%;
+    border-radius: $radius;
+  }
+}
+
+// Responsive 16:9 video embed.
+.detail__video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  margin: 0 0 1.75rem;
+  border: 2px solid $color-border;
+  border-radius: $radius;
+  overflow: hidden;
+
+  iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+}
+
+// A single full-width image on a detail page (sticker screenshot, etc.).
+.detail__media {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  border: 2px solid $color-border;
+  border-radius: $radius;
+  margin: 0 0 1.75rem;
+}
+
+.detail__download {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin: 0 0 1.75rem;
+  padding: 1.25rem;
+  background: $color-card-bg;
+  border: 2px solid $color-border-subtle;
+  border-radius: $radius;
+}
+
+.detail__download-preview {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  background: #000;
+  border-radius: calc(#{$radius} - 4px);
+  flex-shrink: 0;
+}
+
+// Generic pill button, used for CTAs on detail pages (download, watch demo)
+// and the catalogue's "suggest a ..." links.
+.btn {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: 2px solid $color-border;
+  color: $color-border;
+  border-radius: 999px;
+  padding: 0.6rem 1.4rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: $color-border;
+    color: #1a1a1a;
+  }
+}
+
+// ---- Catalogue page chrome (heading + submission CTAs) ------------------
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.page-footer-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 3rem;
+}
+
+// ---- Submission forms ----------------------------------------------------
+
+.submit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 480px;
+  margin-top: 1.5rem;
+}
+
+.submit-form__textarea {
+  border-radius: $radius; // a pill shape looks wrong on a multi-line field
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.submit-form__file {
+  border-radius: $radius; // native file-picker chrome doesn't suit a pill
+  padding: 0.5rem 0.75rem;
+}
+
+// Reset the browser's default fieldset chrome (border/padding). It's only
+// here so `disabled` can grey out every field at once during submission.
+// display:contents drops its own box so the <label> children keep acting as
+// direct flex items of .submit-form; that also means opacity can't target
+// the fieldset itself (no box left to fade), so it's applied to the
+// children instead.
+.submit-form__fields {
+  display: contents;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.submit-form__fields:disabled .filter {
+  opacity: 0.6;
+}
+
+.submit-form__notice {
+  color: $color-text-muted;
+  font-size: 0.85rem;
+}
+
+.submit-form__intro {
+  color: $color-text-muted;
+  max-width: 640px;
+}
+
+.submit-form__success {
+  color: $color-border;
+  font-weight: 600;
+}
+
+.submit-form__error {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+}
+
+// Visually hidden from everyone except bots that fill in every field blindly.
+.submit-form__honeypot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
