@@ -1,12 +1,19 @@
 ---
+import { ChevronDown } from '@lucide/astro';
 import logo from '../assets/logo_denshattack_terminal.png';
+import SearchBox from './SearchBox.astro';
 
 const speedrunLinks = [
-  { label: 'Skips', href: '/' },
+  { label: 'Skips', href: '/skips' },
   { label: 'Techniques', href: '/techniques' },
+  { label: 'Practice', href: '/practice' },
+  { label: 'Route sheet', href: '/route-sheet' },
 ];
 
-const links = [{ label: 'Stickers', href: '/stickers' }];
+const links = [
+  { label: 'Stickers', href: '/stickers' },
+  { label: 'Stats', href: '/stats' },
+];
 
 const path = Astro.url.pathname;
 const isCurrent = (href) => path === href || path === `${href}/`;
@@ -40,6 +47,7 @@ const isSpeedrunActive = speedrunLinks.some((l) => isCurrent(l.href));
               aria-current={isSpeedrunActive ? 'page' : undefined}
             >
               Speedrun
+              <ChevronDown size={14} class="nav-dropdown__chevron" aria-hidden="true" />
             </summary>
             <ul class="nav-dropdown__menu">
               {
@@ -74,15 +82,19 @@ const isSpeedrunActive = speedrunLinks.some((l) => isCurrent(l.href));
         }
       </ul>
     </nav>
+
+    <SearchBox resultsId="header-search-results" />
   </div>
 </header>
 
 <script>
-  document.querySelectorAll('.nav-dropdown').forEach((dropdown) => {
-    document.addEventListener('click', (e) => {
-      if (dropdown.hasAttribute('open') && !dropdown.contains(e.target)) {
-        dropdown.removeAttribute('open');
-      }
+  // Delegated on `document`, live-queried at click time rather than bound
+  // per-element at parse time: keeps working after a view transition swaps
+  // in a new header (`document` persists across transitions, the header's
+  // own DOM nodes don't).
+  document.addEventListener('click', (e) => {
+    document.querySelectorAll('.nav-dropdown[open]').forEach((dropdown) => {
+      if (!dropdown.contains(e.target)) dropdown.removeAttribute('open');
     });
   });
 </script>

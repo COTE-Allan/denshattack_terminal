@@ -1,10 +1,19 @@
 ---
+import { ClientRouter } from 'astro:transitions';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import BackToTop from '../components/BackToTop.astro';
+import PageLoadingBar from '../components/PageLoadingBar.astro';
 import sticker from '../assets/sticker_smile.png';
 import '../styles/global.scss';
 
-const { title, description = '' } = Astro.props;
+const { title, description = '', image = '', jsonLd = null } = Astro.props;
+
+const pageUrl = new URL(Astro.url.pathname, Astro.site);
+// Falls back to the site's own mascot sticker so every page has at least a
+// generic image for link-preview cards (Discord, Twitter, ...), even pages
+// that don't have their own thumbnail (catalogue index pages, forms, ...).
+const ogImage = new URL(image || sticker.src, Astro.site);
 ---
 
 <!doctype html>
@@ -14,15 +23,36 @@ const { title, description = '' } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
-    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <link rel="canonical" href={pageUrl} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+
+    {/* Open Graph + Twitter Card: link-preview cards on Discord, Twitter/X, etc. */}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    {description && <meta name="twitter:description" content={description} />}
+    <meta name="twitter:image" content={ogImage} />
+
+    {/*
+      Structured data for search engines — currently only detail pages with
+      a demo video pass this in (see skips/[slug].astro and
+      techniques/[slug].astro), as a schema.org VideoObject.
+    */}
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+
+    <ClientRouter />
   </head>
   <body>
+    <PageLoadingBar />
     <Header />
     <slot />
     <img
@@ -33,5 +63,6 @@ const { title, description = '' } = Astro.props;
       alt=""
     />
     <Footer />
+    <BackToTop />
   </body>
 </html>

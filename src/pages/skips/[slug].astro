@@ -1,11 +1,15 @@
 ---
+import { Clock, Star } from '@lucide/astro';
 import Base from '../../layouts/Base.astro';
+import BackLink from '../../components/BackLink.astro';
+import CopyLinkButton from '../../components/CopyLinkButton.astro';
+import LearnedToggle from '../../components/LearnedToggle.astro';
 import { getSkips } from '../../lib/wp.js';
 import {
-  difficultyStars,
+  difficultyStarCount,
   formatSeconds,
-  timeSaveIcons,
   timeSaveTier,
+  timeSaveWatchCount,
   youtubeId,
   youtubeStart,
 } from '../../lib/format.js';
@@ -27,11 +31,25 @@ const { skip: s } = Astro.props;
 const videoId = youtubeId(s.youtubeLink);
 const videoStart = youtubeStart(s.youtubeLink);
 const timesaveTier = timeSaveTier(s.timesave);
+const difficultyCount = difficultyStarCount(s.difficulty);
+const watchCount = timeSaveWatchCount(s.timesave);
+const ogImage = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : '';
+const jsonLd = videoId
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'VideoObject',
+      name: s.title,
+      description: s.summary || s.title,
+      thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+      uploadDate: s.modified,
+      embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
+    }
+  : null;
 ---
 
-<Base title={s.title} description={s.summary}>
+<Base title={s.title} description={s.summary} image={ogImage} jsonLd={jsonLd}>
   <main class="skip-page">
-    <p class="breadcrumb"><a href="/">Back to catalogue</a></p>
+    <BackLink href="/skips/" label="Back to catalogue" />
 
     <article>
       <h1 class="detail__title">{s.title}</h1>
@@ -53,7 +71,13 @@ const timesaveTier = timeSaveTier(s.timesave);
           <>
             <dt>Difficulty</dt>
             <dd class="card__stars" data-difficulty={s.difficulty}>
-              {difficultyStars(s.difficulty) ?? s.difficulty}
+              {difficultyCount > 0 ? (
+                Array.from({ length: difficultyCount }).map(() => (
+                  <Star size={14} fill="currentColor" />
+                ))
+              ) : (
+                s.difficulty
+              )}
             </dd>
           </>
         )}
@@ -61,7 +85,10 @@ const timesaveTier = timeSaveTier(s.timesave);
           <>
             <dt>Time save</dt>
             <dd class="card__timesave" title={timesaveTier.label}>
-              {timeSaveIcons(s.timesave)} {formatSeconds(s.timesave)}
+              {Array.from({ length: watchCount }).map(() => (
+                <Clock size={14} />
+              ))}
+              {formatSeconds(s.timesave)}
             </dd>
           </>
         )}
@@ -95,6 +122,11 @@ const timesaveTier = timeSaveTier(s.timesave);
           </p>
         )
       )}
+
+      <div class="skip-page__actions">
+        <LearnedToggle skipId={s.id} />
+        <CopyLinkButton />
+      </div>
     </article>
   </main>
 </Base>

@@ -1,6 +1,16 @@
 import { useMemo, useState } from 'react';
 import { isRecent, youtubeId } from '../lib/format.js';
-import { Card } from './CatalogUI.jsx';
+import { Card, SortSelect } from './CatalogUI.jsx';
+
+const SORTS = {
+  name: (a, b) => a.technique.title.localeCompare(b.technique.title, 'fr', { numeric: true }),
+  recent: (a, b) => new Date(b.technique.modified) - new Date(a.technique.modified),
+};
+
+const SORT_OPTIONS = [
+  { value: 'name', label: 'Name (A–Z)' },
+  { value: 'recent', label: 'Most recent' },
+];
 
 /**
  * Same client-side search/filter pattern as Catalog.jsx (skips), over the
@@ -8,8 +18,9 @@ import { Card } from './CatalogUI.jsx';
  */
 export default function TechniqueCatalog({ techniques }) {
   const [search, setSearch] = useState('');
+  const [sort, setSort] = useState('name');
 
-  const results = useMemo(() => {
+  const matched = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return techniques.map((t) => ({ technique: t, matchedVariant: null }));
 
@@ -29,6 +40,8 @@ export default function TechniqueCatalog({ techniques }) {
       })
       .filter(Boolean);
   }, [techniques, search]);
+
+  const results = useMemo(() => [...matched].sort(SORTS[sort]), [matched, sort]);
 
   const hasFilters = search;
 
@@ -57,9 +70,13 @@ export default function TechniqueCatalog({ techniques }) {
         )}
       </div>
 
-      <p className="catalog__count" aria-live="polite">
-        {results.length} technique{results.length > 1 ? 's' : ''}
-      </p>
+      <div className="catalog__toolbar">
+        <p className="catalog__count" aria-live="polite">
+          {results.length} technique{results.length > 1 ? 's' : ''}
+        </p>
+
+        <SortSelect value={sort} onChange={setSort} options={SORT_OPTIONS} />
+      </div>
 
       {results.length === 0 ? (
         <p className="catalog__empty">

@@ -1,0 +1,20 @@
+---
+import Base from '../layouts/Base.astro';
+import RouteSheet from '../components/RouteSheet.jsx';
+import { getSkips } from '../lib/wp.js';
+
+const skips = await getSkips();
+---
+
+<Base
+  title="Route sheet"
+  description="Build and print your own run: pick the skips you're actually going for."
+>
+  <main>
+    <div class="page-header">
+      <h1>Route sheet</h1>
+    </div>
+
+    <RouteSheet client:load skips={skips} />
+  </main>
+</Base>

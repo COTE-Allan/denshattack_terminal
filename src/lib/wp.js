@@ -17,6 +17,8 @@
  *              of that one)
  */
 
+import { youtubeId } from './format.js';
+
 const ENDPOINT = import.meta.env.WP_GRAPHQL_URL;
 
 if (!ENDPOINT) {
@@ -189,11 +191,19 @@ function truncate(text, max = 180) {
   return text.slice(0, text.lastIndexOf(' ', max)) + '…';
 }
 
+// Memoized per build: Header.astro (included on every page) needs the full
+// content list for its quick-search index, and without this every single
+// page would re-run the same three GraphQL queries at build time.
+let skipsPromise = null;
+export function getSkips() {
+  return (skipsPromise ??= fetchSkips());
+}
+
 /**
  * Flatten the GraphQL shape into plain objects the React island can filter
  * over without digging through nested fields on every keystroke.
  */
-export async function getSkips() {
+async function fetchSkips() {
   const data = await query(SKIPS);
 
   const skips = (data.skips?.nodes ?? []).map((n) => {
@@ -229,11 +239,16 @@ export async function getSkips() {
   );
 }
 
+let stickersPromise = null;
+export function getStickers() {
+  return (stickersPromise ??= fetchStickers());
+}
+
 /**
  * Flatten the GraphQL shape into plain objects the React island can filter
  * over without digging through nested fields on every keystroke.
  */
-export async function getStickers() {
+async function fetchStickers() {
   const data = await query(STICKERS);
 
   const stickers = (data.stickers?.edges ?? []).map(({ node: n }) => {
@@ -276,7 +291,12 @@ export async function getStickers() {
  * as a second pass since a post's variants aren't knowable from its own
  * GraphQL node, only from every other node's `variantOf`.
  */
-export async function getTechniques() {
+let techniquesPromise = null;
+export function getTechniques() {
+  return (techniquesPromise ??= fetchTechniques());
+}
+
+async function fetchTechniques() {
   const data = await query(TECHNIQUES);
 
   const techniques = (data.techniques?.edges ?? []).map(({ node: n }) => {
@@ -326,4 +346,55 @@ export function facet(items, key) {
   return [...new Set(items.map((i) => i[key]).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b, 'fr', { numeric: true })
   );
+}
+
+function youtubeThumb(url) {
+  const id = youtubeId(url);
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : '';
+}
+
+/**
+ * Every skip, technique, and sticker flattened into one shape, for the
+ * site-wide search and the "what's new" page — the only two places that
+ * need to look across all three catalogues at once.
+ */
+export async function getAllContent() {
+  const [skips, techniques, stickers] = await Promise.all([
+    getSkips(),
+    getTechniques(),
+    getStickers(),
+  ]);
+
+  const skipItems = skips.map((s) => ({
+    type: 'skip',
+    href: `/skips/${s.slug}/`,
+    title: s.title,
+    summary: s.summary,
+    mediaSrc: youtubeThumb(s.youtubeLink),
+    modified: s.modified,
+  }));
+
+  const techniqueItems = techniques
+    // Variants are shown inline on their parent's page, not as their own
+    // catalogue entry, so they're left out here too.
+    .filter((t) => !t.variantOfId)
+    .map((t) => ({
+      type: 'technique',
+      href: `/techniques/${t.slug}/`,
+      title: t.title,
+      summary: t.summary,
+      mediaSrc: youtubeThumb(t.youtubeLink),
+      modified: t.modified,
+    }));
+
+  const stickerItems = stickers.map((s) => ({
+    type: 'sticker',
+    href: `/stickers/${s.slug}/`,
+    title: s.title,
+    summary: s.artist ? `By ${s.artist}` : '',
+    mediaSrc: s.screenshot || s.image || '',
+    modified: s.modified,
+  }));
+
+  return [...skipItems, ...techniqueItems, ...stickerItems];
 }

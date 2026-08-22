@@ -1,5 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
+import BackLink from '../../components/BackLink.astro';
+import CopyLinkButton from '../../components/CopyLinkButton.astro';
 import { getTechniques } from '../../lib/wp.js';
 import { youtubeId, youtubeStart } from '../../lib/format.js';
 
@@ -19,11 +21,23 @@ export async function getStaticPaths() {
 const { technique: t } = Astro.props;
 const videoId = youtubeId(t.youtubeLink);
 const videoStart = youtubeStart(t.youtubeLink);
+const ogImage = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : '';
+const jsonLd = videoId
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'VideoObject',
+      name: t.title,
+      description: t.summary || t.title,
+      thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+      uploadDate: t.modified,
+      embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
+    }
+  : null;
 ---
 
-<Base title={t.title} description={t.summary}>
+<Base title={t.title} description={t.summary} image={ogImage} jsonLd={jsonLd}>
   <main class="technique-page">
-    <p class="breadcrumb"><a href="/techniques/">Back to techniques</a></p>
+    <BackLink href="/techniques/" label="Back to techniques" />
 
     <article>
       <h1 class="detail__title">{t.title}</h1>
@@ -63,6 +77,8 @@ const videoStart = youtubeStart(t.youtubeLink);
           </p>
         )
       )}
+
+      <CopyLinkButton />
     </article>
 
     {t.variants.length > 0 && (

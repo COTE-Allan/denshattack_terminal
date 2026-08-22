@@ -1,0 +1,20 @@
+---
+import Base from '../layouts/Base.astro';
+import PracticeMode from '../components/PracticeMode.jsx';
+import { getSkips } from '../lib/wp.js';
+
+const skips = await getSkips();
+---
+
+<Base
+  title="Practice"
+  description="A checklist of every skip: track which ones you've learned."
+>
+  <main>
+    <div class="page-header">
+      <h1>Practice</h1>
+    </div>
+
+    <PracticeMode client:load skips={skips} />
+  </main>
+</Base>

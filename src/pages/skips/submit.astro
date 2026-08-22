@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import BackLink from '../../components/BackLink.astro';
 import SubmitForm from '../../components/SubmitForm.jsx';
 import { restBase } from '../../lib/wp.js';
 
@@ -100,7 +101,7 @@ const fields = [
 
 <Base title="Add a skip" description="Submit a new skip for review.">
   <main>
-    <p class="breadcrumb"><a href="/">Back to catalogue</a></p>
+    <BackLink href="/skips/" label="Back to catalogue" />
 
     <h1 class="detail__title">Add a skip</h1>
     <p class="submit-form__intro">

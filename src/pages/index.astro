@@ -1,33 +1,77 @@
 ---
 import Base from '../layouts/Base.astro';
-import Catalog from '../components/Catalog.jsx';
-import { getSkips, facet } from '../lib/wp.js';
+import DiscordIcon from '../components/DiscordIcon.astro';
+import SearchBox from '../components/SearchBox.astro';
+import { Card } from '../components/CatalogUI.jsx';
+import { getAllContent } from '../lib/wp.js';
+import { isRecent, TYPE_LABELS } from '../lib/format.js';
+import logo from '../assets/logo_denshattack_terminal.png';
 
-// Runs at build time. If WordPress is unreachable the build fails loudly
-// rather than shipping an empty catalogue.
-const skips = await getSkips();
+const RECENT_DAYS = 30;
+const MAX_HOME_ITEMS = 6;
 
-const facets = {
-  levels: facet(skips, 'level'),
-  difficulties: facet(skips, 'difficulty'),
-};
+const all = await getAllContent();
+const recent = all
+  .filter((i) => isRecent(i.modified, RECENT_DAYS))
+  .sort((a, b) => new Date(b.modified) - new Date(a.modified))
+  .slice(0, MAX_HOME_ITEMS);
 ---
 
-<Base title="Catalog" description="Speedrun skips and techniques.">
-  <main>
-    <div class="page-header">
-      <h1>Catalog</h1>
-      <a class="btn" href="/skips/submit/">Add a skip</a>
-    </div>
+<Base
+  title="Denshattack Station"
+  description="The community platform for Denshattack fans and speedrunners."
+>
+  <main class="home-page">
+    <section class="hero">
+      <h1 class="hero__logo">
+        <img
+          src={logo.src}
+          width={logo.width}
+          height={logo.height}
+          alt="Denshattack Station"
+        />
+      </h1>
+      <p class="hero__tagline">
+        The community platform for Denshattack fans and speedrunners: skips,
+        techniques, stickers, and more to come.
+      </p>
 
-    {/*
-      client:load hydrates on page load so filters work immediately.
-      Swap for client:visible if the list sits far down the page.
-    */}
-    <Catalog client:load skips={skips} facets={facets} />
+      <SearchBox
+        resultsId="home-search-results"
+        size="large"
+        placeholder="Search skips, techniques, stickers…"
+      />
 
-    <div class="page-footer-cta">
-      <a class="btn" href="/skips/submit/">Add a skip</a>
-    </div>
+      <div class="hero__links">
+        <a class="btn" href="/skips/">Skips</a>
+        <a class="btn" href="/techniques/">Techniques</a>
+        <a class="btn" href="/stickers/">Stickers</a>
+        <a class="btn" href="/stats">Stats</a>
+        <a class="btn btn--discord" href="https://discord.gg/ewmbqvtYQj" target="_blank" rel="noopener">
+          <DiscordIcon size={16} /> Join the Discord
+        </a>
+      </div>
+    </section>
+
+    {recent.length > 0 && (
+      <section class="home-section">
+        <div class="page-header">
+          <h2>What's new</h2>
+          <a class="home-section__see-all" href="/new">See all →</a>
+        </div>
+
+        <ul class="catalog__list">
+          {recent.map((i) => (
+            <Card
+              href={i.href}
+              media={i.mediaSrc ? { src: i.mediaSrc } : null}
+              title={i.title}
+              summary={i.summary}
+              meta={[{ label: 'Type', value: TYPE_LABELS[i.type] }]}
+            />
+          ))}
+        </ul>
+      </section>
+    )}
   </main>
 </Base>

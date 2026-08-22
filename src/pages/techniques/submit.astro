@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import BackLink from '../../components/BackLink.astro';
 import SubmitForm from '../../components/SubmitForm.jsx';
 import { getTechniques, restBase } from '../../lib/wp.js';
 
@@ -25,7 +26,7 @@ const fields = [
 
 <Base title="Add a technique" description="Submit a new technique for review.">
   <main>
-    <p class="breadcrumb"><a href="/techniques/">Back to techniques</a></p>
+    <BackLink href="/techniques/" label="Back to techniques" />
 
     <h1 class="detail__title">Add a technique</h1>
     <p class="submit-form__intro">

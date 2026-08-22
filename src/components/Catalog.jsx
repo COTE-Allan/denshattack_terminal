@@ -1,14 +1,40 @@
+import { Clock, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
   TIME_SAVE_TIERS,
-  difficultyStars,
+  difficultyStarCount,
   formatSeconds,
   isRecent,
-  timeSaveIcons,
   timeSaveTier,
+  timeSaveWatchCount,
   youtubeId,
 } from '../lib/format.js';
-import { Card, Select } from './CatalogUI.jsx';
+import { useLearnedSkips } from '../lib/useLearned.js';
+import { Card, IconRow, Select, SortSelect } from './CatalogUI.jsx';
+
+/** Plain-text fallback for the Difficulty <select>: <option> can't hold SVG icons. */
+function difficultyOptionLabel(difficulty) {
+  const n = difficultyStarCount(difficulty);
+  return n > 0 ? '★'.repeat(n) : difficulty;
+}
+
+const SORTS = {
+  level: (a, b) =>
+    a.level.localeCompare(b.level, 'fr', { numeric: true }) ||
+    a.title.localeCompare(b.title, 'fr', { numeric: true }),
+  name: (a, b) => a.title.localeCompare(b.title, 'fr', { numeric: true }),
+  recent: (a, b) => new Date(b.modified) - new Date(a.modified),
+  difficulty: (a, b) => Number(b.difficulty || 0) - Number(a.difficulty || 0),
+  timesave: (a, b) => (b.timesave ?? -1) - (a.timesave ?? -1),
+};
+
+const SORT_OPTIONS = [
+  { value: 'level', label: 'Level' },
+  { value: 'name', label: 'Name (A–Z)' },
+  { value: 'recent', label: 'Most recent' },
+  { value: 'difficulty', label: 'Difficulty (hardest first)' },
+  { value: 'timesave', label: 'Time save (biggest first)' },
+];
 
 /**
  * Client-side search and filtering over the whole catalogue.
@@ -26,8 +52,10 @@ export default function Catalog({ skips, facets }) {
   const [level, setLevel] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const [timesave, setTimesave] = useState('');
+  const [sort, setSort] = useState('level');
+  const { learned, toggle: toggleLearned } = useLearnedSkips();
 
-  const results = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
 
     return skips.filter((s) => {
@@ -39,6 +67,11 @@ export default function Catalog({ skips, facets }) {
       return true;
     });
   }, [skips, search, level, difficulty, timesave]);
+
+  const results = useMemo(
+    () => [...filtered].sort(SORTS[sort]),
+    [filtered, sort]
+  );
 
   const hasFilters = search || level || difficulty || timesave;
 
@@ -76,7 +109,7 @@ export default function Catalog({ skips, facets }) {
           value={difficulty}
           onChange={setDifficulty}
           options={facets.difficulties}
-          formatOption={(o) => difficultyStars(o) ?? o}
+          formatOption={difficultyOptionLabel}
           allLabel="All"
         />
 
@@ -90,7 +123,7 @@ export default function Catalog({ skips, facets }) {
             <option value="">All</option>
             {TIME_SAVE_TIERS.map((t) => (
               <option key={t.watches} value={t.watches}>
-                {'⌚'.repeat(t.watches)} {t.short}
+                {'●'.repeat(t.watches)} {t.short}
               </option>
             ))}
           </select>
@@ -103,9 +136,28 @@ export default function Catalog({ skips, facets }) {
         )}
       </div>
 
-      <p className="catalog__count" aria-live="polite">
-        {results.length} skip{results.length > 1 ? 's' : ''}
-      </p>
+      <div className="catalog__toolbar">
+        <p className="catalog__count" aria-live="polite">
+          {results.length} skip{results.length > 1 ? 's' : ''}
+        </p>
+
+        <SortSelect value={sort} onChange={setSort} options={SORT_OPTIONS} />
+      </div>
+
+      <div className="catalog__learned-progress">
+        <p>
+          {learned.size} / {skips.length} learned
+        </p>
+        <div className="catalog__learned-bar">
+          <div
+            className="catalog__learned-bar-fill"
+            style={{ width: `${skips.length ? (learned.size / skips.length) * 100 : 0}%` }}
+          />
+        </div>
+        <a className="catalog__learned-link" href="/practice">
+          Practice mode
+        </a>
+      </div>
 
       {results.length === 0 ? (
         <p className="catalog__empty">
@@ -115,7 +167,12 @@ export default function Catalog({ skips, facets }) {
       ) : (
         <ul className="catalog__list">
           {results.map((s) => (
-            <SkipCard key={s.id} skip={s} />
+            <SkipCard
+              key={s.id}
+              skip={s}
+              learned={learned.has(s.id)}
+              onToggleLearned={() => toggleLearned(s.id)}
+            />
           ))}
         </ul>
       )}
@@ -125,18 +182,30 @@ export default function Catalog({ skips, facets }) {
 
 /** Builds the meta list for a skip card/detail: shared shape for the <Card>. */
 function skipMeta(s) {
+  const difficultyCount = difficultyStarCount(s.difficulty);
+  const watchCount = timeSaveWatchCount(s.timesave);
+
   return [
     s.level && { label: 'Level', value: s.level, attrs: { 'data-level': s.level } },
     s.foundBy && { label: 'Found by', value: s.foundBy },
     s.difficulty && {
       label: 'Difficulty',
-      value: difficultyStars(s.difficulty) ?? s.difficulty,
+      value:
+        difficultyCount > 0 ? (
+          <IconRow icon={Star} count={difficultyCount} filled />
+        ) : (
+          s.difficulty
+        ),
       className: 'card__stars',
       attrs: { 'data-difficulty': s.difficulty },
     },
     s.timesave != null && {
       label: 'Time save',
-      value: `${timeSaveIcons(s.timesave)} ${formatSeconds(s.timesave)}`,
+      value: (
+        <>
+          <IconRow icon={Clock} count={watchCount} /> {formatSeconds(s.timesave)}
+        </>
+      ),
       className: 'card__timesave',
       attrs: { title: timeSaveTier(s.timesave)?.label },
     },
@@ -144,7 +213,7 @@ function skipMeta(s) {
 }
 
 /** A single catalogue card, using the linked video's YouTube thumbnail as cover. */
-function SkipCard({ skip: s }) {
+function SkipCard({ skip: s, learned, onToggleLearned }) {
   const videoId = youtubeId(s.youtubeLink);
 
   return (
@@ -155,6 +224,8 @@ function SkipCard({ skip: s }) {
       summary={s.summary}
       meta={skipMeta(s)}
       badge={isRecent(s.modified) ? 'New!' : null}
+      learned={learned}
+      onToggleLearned={onToggleLearned}
     />
   );
 }

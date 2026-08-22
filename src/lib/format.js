@@ -20,36 +20,47 @@ export function timeSaveTier(seconds) {
   );
 }
 
-/** ⌚ repeated per tier, e.g. "⌚⌚⌚". */
-export function timeSaveIcons(seconds) {
-  const tier = timeSaveTier(seconds);
-  return tier ? '⌚'.repeat(tier.watches) : '';
-}
-
-/** Seconds to a readable value, e.g. 24 -> "24s", 125 -> "2m 05s". */
-export function formatSeconds(seconds) {
-  if (!Number.isFinite(seconds)) return '';
-  if (seconds < 60) return `${seconds}s`;
-
-  const m = Math.floor(seconds / 60);
-  const s = Math.round(seconds % 60);
-  return `${m}m ${String(s).padStart(2, '0')}s`;
+/**
+ * How many watch icons a time save is worth (1-5). Callers render this many
+ * <Clock> icons themselves — see Catalog.jsx (React) and skips/[slug].astro
+ * (Astro) for the two icon-set adapters. Returns 0 when the value isn't a
+ * usable number, so callers can render nothing.
+ */
+export function timeSaveWatchCount(seconds) {
+  return timeSaveTier(seconds)?.watches ?? 0;
 }
 
 /**
- * Star rating for a numeric difficulty (e.g. "3" -> "⭐⭐⭐"). Uses the
- * colour star emoji rather than a plain "★" glyph so it stays yellow
- * wherever it's shown, independent of surrounding text colour (same trick
- * as the ⌚ time-save icons). Filled stars only, capped at `max`, with no
- * trailing hollow stars.
- * Returns null when difficulty isn't a usable number, so callers can fall
- * back to showing the raw value instead.
+ * Seconds to a readable value, e.g. 24 -> "~24s", 125 -> "~2m 05s",
+ * 5400 -> "~1h 30m". Every time-save figure on the site is a rough,
+ * self-reported estimate (see TIME_SAVE_TIERS's own "Around ... seconds"
+ * tooltip text), so the "~" is part of the value everywhere it's shown —
+ * a card, a detail page, or the site-wide total on /stats.
  */
-export function difficultyStars(difficulty, max = 5) {
-  const n = Number(difficulty);
-  if (!Number.isFinite(n) || n <= 0) return null;
+export function formatSeconds(seconds) {
+  if (!Number.isFinite(seconds)) return '';
+  if (seconds < 60) return `~${seconds}s`;
+  if (seconds < 3600) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.round(seconds % 60);
+    return `~${m}m ${String(s).padStart(2, '0')}s`;
+  }
 
-  return '⭐'.repeat(Math.min(Math.round(n), max));
+  const h = Math.floor(seconds / 3600);
+  const m = Math.round((seconds % 3600) / 60);
+  return `~${h}h ${String(m).padStart(2, '0')}m`;
+}
+
+/**
+ * How many star icons a numeric difficulty is worth (1-5, filled stars
+ * only). Callers render this many <Star> icons themselves, same pattern as
+ * `timeSaveWatchCount`. Returns 0 when difficulty isn't a usable number, so
+ * callers can fall back to showing the raw value instead.
+ */
+export function difficultyStarCount(difficulty, max = 5) {
+  const n = Number(difficulty);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(Math.round(n), max);
 }
 
 /**
@@ -64,6 +75,9 @@ export function isRecent(modified, days = 7) {
   if (Number.isNaN(modifiedAt)) return false;
   return Date.now() - modifiedAt < days * 24 * 60 * 60 * 1000;
 }
+
+/** Shared across the site-wide search (header quick search + /search) and /new. */
+export const TYPE_LABELS = { skip: 'Skip', technique: 'Technique', sticker: 'Sticker' };
 
 /** Pull a YouTube video id out of any of the usual URL shapes. */
 export function youtubeId(url) {

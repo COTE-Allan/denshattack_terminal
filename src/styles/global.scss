@@ -1,4 +1,5 @@
 @use 'variables' as *;
+@use 'sass:color';
 
 // ---- Reset -----------------------------------------------------------
 
@@ -193,19 +194,17 @@ main {
     display: none; // Chrome/Safari's default triangle
   }
 
-  &::after {
-    content: '▾';
-    font-size: 0.7em;
-    transition: transform 0.15s ease;
-  }
-
   .nav-dropdown[open] & {
     color: $color-border;
     background-color: rgba($color-border, 0.15);
+  }
+}
 
-    &::after {
-      transform: rotate(180deg);
-    }
+.nav-dropdown__chevron {
+  transition: transform 0.15s ease;
+
+  .nav-dropdown[open] & {
+    transform: rotate(180deg);
   }
 }
 
@@ -245,6 +244,150 @@ main {
   }
 }
 
+// Site-wide search (<SearchBox>, used in the header and the homepage
+// hero), GET-submitted to /search — works with no JS, and is how a static
+// site (no server to read a query string at request time) still supports a
+// prefilled, shareable "?q=..." search URL. The quick-results dropdown
+// positions itself relative to this wrapper.
+.search-box {
+  position: relative;
+}
+
+.search-box__form {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: $color-bg;
+  border: 1px solid $color-border-subtle;
+  border-radius: 999px;
+  padding: 0.3rem 0.3rem 0.3rem 1rem;
+  transition: border-color 0.15s ease;
+
+  &:focus-within {
+    border-color: $color-border;
+  }
+}
+
+.search-box__input {
+  background: transparent;
+  border: 0;
+  color: $color-text;
+  font-size: 0.85rem;
+  width: 140px;
+  min-width: 0;
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  // The pill (.search-box__form) already shows focus via its own
+  // border-color on :focus-within — a square outline on the bare input
+  // clashes with that rounded shape, so skip the generic :focus-visible
+  // outline here specifically.
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.search-box__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: $color-text-muted;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    color: $color-border;
+    background-color: rgba($color-border, 0.15);
+  }
+}
+
+// Bigger version for the homepage hero, centered and standing on its own
+// rather than tucked into the header pill.
+.search-box--large {
+  max-width: 480px;
+  margin: 0 auto;
+
+  .search-box__form {
+    padding: 0.5rem 0.5rem 0.5rem 1.25rem;
+  }
+
+  .search-box__input {
+    flex: 1;
+    width: auto;
+    font-size: 1rem;
+  }
+
+  .search-box__btn {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+.search-box__results {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  left: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem;
+  background: $color-bg-header;
+  border: 2px solid $color-border-subtle;
+  border-radius: $radius;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  z-index: 60;
+  max-height: 60vh;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.search-box__result {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  text-decoration: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: calc(#{$radius} - 4px);
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba($color-border, 0.15);
+  }
+}
+
+.search-box__result-type {
+  flex-shrink: 0;
+  color: $color-text-muted;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.search-box__result-title {
+  color: $color-text;
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-box__empty {
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+}
+
 // Below this width the logo + all four nav links no longer fit on one line
 // without overflowing, so stack them instead, both centered, and relax the
 // pill into a plain rounded rect since a 999px radius looks odd once the
@@ -280,6 +423,15 @@ main {
 
   .nav-dropdown__link {
     padding: 0.65rem 0.9rem;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  .search-box__input {
+    flex: 1;
+    width: auto;
   }
 }
 
@@ -338,10 +490,196 @@ main {
   }
 }
 
+// Result count + sort picker share a row, count on the left, sort on the
+// right — the sort control doesn't need its own filter__label-height row.
+.catalog__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+
+  .filter {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
 .catalog__count {
   color: $color-text-muted;
   font-size: 0.85rem;
-  margin: 0 0 1rem;
+  margin: 0;
+}
+
+// "Learned" progress (see the per-card toggle and /practice), shared
+// between Catalog.jsx and PracticeMode.jsx.
+.catalog__learned-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 1.5rem;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+
+  p {
+    margin: 0;
+    white-space: nowrap;
+  }
+}
+
+.catalog__learned-bar {
+  flex: 1;
+  min-width: 80px;
+  height: 6px;
+  background: $color-card-bg;
+  border: 1px solid $color-border-subtle;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.catalog__learned-bar-fill {
+  height: 100%;
+  background: $color-border;
+  transition: width 0.2s ease;
+}
+
+.catalog__learned-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    color: $color-border;
+    text-decoration: underline;
+  }
+}
+
+// Clickable browse-by list (currently: sticker tags, toggling the search
+// box). `<button>` and `<a>` variants share the same look, so future lists
+// like this can use either depending on whether clicking should filter
+// in place or navigate somewhere.
+.pill-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  background: $color-card-bg;
+  border: 1px solid $color-border-subtle;
+  color: $color-text-muted;
+  text-decoration: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    color: $color-border;
+    border-color: $color-border;
+  }
+}
+
+.pill--active {
+  color: #1a1a1a;
+  background: $color-border;
+  border-color: $color-border;
+
+  &:hover {
+    color: #1a1a1a;
+  }
+}
+
+// Denser variant for the route sheet's picker, where there can be a lot of
+// these in view at once.
+.pill--compact {
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+}
+
+// ---- Stats page ------------------------------------------------------
+
+.stat-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  // Wide enough that the longest label ("Techniques catalogued", icon
+  // included) fits on one line at this font-size — see .stat-tile__label.
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.stat-tile {
+  // Grid items default to min-width: auto, so a long unbroken value (a
+  // contributor's name) would otherwise force the tile — and the whole
+  // grid track — wider than its column instead of wrapping.
+  min-width: 0;
+  background: $color-card-bg;
+  border: 2px solid $color-border-subtle;
+  border-radius: $radius;
+  padding: 1.25rem 1.5rem;
+}
+
+.stat-tile__label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.6rem;
+  color: $color-text-muted;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  // Icon + text stay on one line (the grid's 260px minimum column width is
+  // sized for this); overflow: hidden is just a safety net if a future
+  // label ends up longer than "Techniques catalogued" on a very narrow
+  // screen, so it clips instead of visually breaking the tile.
+  white-space: nowrap;
+  overflow: hidden;
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+.stat-tile__value {
+  margin: 0;
+  color: $color-border;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.15;
+  // Proportional figures for a big standalone number — tabular-nums is for
+  // columns that need to align, which a single stat-tile value never is.
+  font-variant-numeric: proportional-nums;
+  // A name (top finder, top artist) can be longer than a plain count —
+  // wrap it instead of overflowing the tile.
+  overflow-wrap: break-word;
+}
+
+.stat-tile__caption {
+  margin: 0.35rem 0 0;
+  color: $color-text-muted;
+  font-size: 0.8rem;
 }
 
 .catalog__empty {
@@ -491,7 +829,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
+  color: $color-text;
   opacity: 0.3;
 }
 
@@ -508,6 +846,36 @@ main {
   letter-spacing: 0.04em;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
+}
+
+// Sits over the card's top-right corner as a sibling of .card__link, not
+// nested inside it (see the comment on <Card> in CatalogUI.jsx for why).
+.card__learned-toggle {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    border-color: $color-border;
+  }
+}
+
+.card__learned-toggle--active {
+  border-color: $color-border;
+  background: $color-border;
+  color: #1a1a1a;
 }
 
 .card__body {
@@ -571,8 +939,15 @@ main {
 
 .card__stars,
 .card__timesave {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
   font-size: 0.95rem;
   letter-spacing: 0.05em;
+
+  svg {
+    flex-shrink: 0;
+  }
 }
 
 // ---- Detail pages (skip, sticker, ...) ----------------------------------
@@ -591,10 +966,6 @@ main {
     font-size: 0.85rem;
     font-weight: 600;
     transition: color 0.15s ease;
-
-    &::before {
-      content: '←';
-    }
 
     &:hover {
       color: $color-border;
@@ -737,6 +1108,7 @@ main {
   display: inline-flex;
   align-items: center;
   justify-content: center; // stays centered even when a flex parent stretches it (e.g. the submit form)
+  gap: 0.5rem; // only matters when a button also carries an icon (e.g. the Discord CTA)
   text-align: center;
   background: transparent;
   border: 2px solid $color-border;
@@ -766,8 +1138,84 @@ main {
   gap: 1rem;
   margin-bottom: 1.5rem;
 
-  h1 {
+  h1,
+  h2 {
     margin: 0;
+  }
+}
+
+// ---- Homepage ----------------------------------------------------------
+
+.hero {
+  text-align: center;
+  padding: 2.5rem 0 3rem;
+}
+
+.hero__logo {
+  margin: 0 0 1.25rem;
+
+  img {
+    display: block;
+    height: 5.5rem;
+    width: auto;
+    margin: 0 auto;
+  }
+}
+
+.hero__tagline {
+  color: $color-text-muted;
+  font-size: 1.05rem;
+  max-width: 520px;
+  margin: 0 auto 2rem;
+}
+
+.hero__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+// Discord's own brand color instead of the site's yellow accent — the
+// point of this specific button is to be instantly recognizable.
+.btn--discord {
+  border-color: #5865f2;
+  color: #5865f2;
+
+  &:hover {
+    background: #5865f2;
+    color: #fff;
+  }
+}
+
+// "I've learned this" in /practice — solid from the start rather than
+// outline-then-fill on hover like every other .btn, so the positive action
+// reads as the confirmed, primary one next to "Skip for now".
+.btn--learned {
+  background: $color-border;
+  color: #1a1a1a;
+
+  &:hover {
+    background: color.adjust($color-border, $lightness: -8%);
+    color: #1a1a1a;
+  }
+}
+
+.home-section {
+  margin-top: 3rem;
+}
+
+.home-section__see-all {
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: $color-border;
+    text-decoration: underline;
   }
 }
 
@@ -848,6 +1296,28 @@ main {
   text-align: center;
 }
 
+.site-footer__links {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-bottom: 0.75rem;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: $color-text-muted;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      color: $color-border;
+      text-decoration: underline;
+    }
+  }
+}
+
 .site-footer__text {
   margin: 0;
   color: $color-text-muted;
@@ -867,4 +1337,424 @@ main {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+// ---- Misc detail-page/global widgets --------------------------------------
+
+// Sits at the end of a detail page's <article>, so it doesn't need its own
+// wrapper — .btn already centers its own text and this just adds a little
+// breathing room above it.
+.copy-link-btn {
+  margin-top: 0.5rem;
+}
+
+// Groups the learned-toggle and copy-link buttons on a skip's detail page
+// into one row instead of each carrying its own top margin.
+.skip-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+
+  .copy-link-btn {
+    margin-top: 0;
+  }
+}
+
+// Fixed bottom-right, hidden until the visitor has scrolled a screenful or
+// so down (see BackToTop.astro). Circular to read clearly as a control
+// rather than more page content.
+.back-to-top {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 40;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-bg-header;
+  border: 2px solid $color-border;
+  border-radius: 50%;
+  color: $color-border;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    background: $color-border;
+    color: #1a1a1a;
+    transform: translateY(-2px);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// ---- Page transitions ------------------------------------------------
+
+// <ClientRouter> is still active (prefetch-driven SPA navigation, and the
+// astro:before-preparation/astro:page-load events PageLoadingBar.astro
+// hooks into), but its default crossfade is switched off in favor of an
+// instant cut — overriding the animation directly on the browser's View
+// Transition pseudo-elements works regardless of any transition:animate
+// directive (or lack of one) on individual pages.
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation: none !important;
+  mix-blend-mode: normal;
+}
+
+// ---- Page transition feedback (see PageLoadingBar.astro) -----------------
+
+// Indeterminate top progress bar: jumps to 80% width over a slow easing
+// curve as soon as a navigation starts (so it always looks like it's still
+// making progress, however long the fetch actually takes), then snaps to
+// 100% and fades out once the new page has swapped in.
+#page-loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  background: $color-border;
+  z-index: 100;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.page-loading-bar--active {
+  width: 80%;
+  transition: width 6s cubic-bezier(0.1, 0.5, 0.1, 1);
+}
+
+.page-loading-bar--done {
+  width: 100%;
+  transition: width 0.2s ease, opacity 0.3s ease 0.2s;
+  opacity: 0;
+}
+
+// Soft "please wait": dims the outgoing page and ignores clicks on it
+// while a navigation is in flight, so a slow transition can't be
+// double-clicked into firing a second one. Header/footer/back-to-top stay
+// interactive on purpose — only the content that's about to be replaced
+// dims.
+.is-navigating main {
+  pointer-events: none;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+// ---- Practice mode (see PracticeMode.jsx) ---------------------------------
+
+.practice__note {
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  max-width: 640px;
+  margin: 0 0 1.5rem;
+}
+
+// <details>, collapsed by default: a multi-column flow would reflow
+// unevenly once one opens (variable height), so this stays a single
+// column and leans on being collapsed to keep ~50 levels manageable
+// instead — same reasoning and look as .route-sheet__picker-level.
+.practice__level {
+  margin-bottom: 0.5rem;
+  break-inside: avoid;
+
+  summary {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  .practice__checklist {
+    margin: 0.5rem 0 0.75rem 1.25rem;
+  }
+}
+
+.practice__level-chevron {
+  flex-shrink: 0;
+  color: $color-text-muted;
+  transition: transform 0.15s ease;
+
+  .practice__level[open] & {
+    transform: rotate(90deg);
+  }
+}
+
+.practice__checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+// Flat/non-level sort has no level sections to lean on for compression
+// (see .practice__levels below, used when grouped), so it gets its own
+// multi-column flow instead — otherwise a few hundred skips would be one
+// very long single column.
+.practice__checklist--flat {
+  display: block;
+  columns: 280px;
+  column-gap: 1.5rem;
+
+  li {
+    break-inside: avoid;
+    margin-bottom: 0.35rem;
+  }
+}
+
+.practice__checklist-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: $radius;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: $color-card-bg;
+  }
+}
+
+// Wraps only the checkbox (not the title/meta) so clicking the row's link
+// doesn't also toggle it, and vice versa — the two are separate controls
+// sharing one row, not one big label.
+.practice__checklist-check {
+  display: flex;
+  align-items: center;
+  padding: 0.2rem; // widens the click target a little beyond the checkbox itself
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: $color-border;
+    cursor: pointer;
+  }
+}
+
+.practice__checklist-title {
+  flex: 1;
+  min-width: 160px;
+  color: $color-text;
+  text-decoration: none;
+
+  &:hover {
+    color: $color-border;
+    text-decoration: underline;
+  }
+}
+
+.practice__checklist-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+// ---- Route sheet (see RouteSheet.jsx) -------------------------------------
+
+.route-sheet__note {
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  max-width: 640px;
+  margin: 0 0 1.5rem;
+}
+
+// Two panes side by side: pick skips on the left, watch "My route" build
+// up live on the right, instead of scrolling all the way down to see it.
+// Stacks on narrower screens, picker first.
+.route-sheet__layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+@media (max-width: 780px) {
+  .route-sheet__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.route-sheet__picker {
+  min-width: 0; // grid items default to min-width: auto, which fights wrapping content
+}
+
+.route-sheet__summary {
+  min-width: 0;
+  padding: 1.5rem;
+  background: $color-card-bg;
+  border: 2px solid $color-border-subtle;
+  border-radius: $radius;
+  // Stays in view while scrolling the picker on the left, like a cart
+  // panel. 6.5rem clears the sticky header's own height plus some air.
+  position: sticky;
+  top: 6.5rem;
+}
+
+@media (max-width: 780px) {
+  .route-sheet__summary {
+    position: static;
+  }
+}
+
+// <details>, collapsed by default: with a big catalogue, showing every
+// level's full pill list at once would be a wall of buttons.
+.route-sheet__picker-level {
+  margin-bottom: 0.5rem;
+  break-inside: avoid;
+
+  summary {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  .pill-list {
+    margin: 0.5rem 0 0.75rem 1.25rem;
+  }
+}
+
+.route-sheet__picker-chevron {
+  flex-shrink: 0;
+  color: $color-text-muted;
+  transition: transform 0.15s ease;
+
+  .route-sheet__picker-level[open] & {
+    transform: rotate(90deg);
+  }
+}
+
+
+.route-sheet__summary-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.route-sheet__total-timesave {
+  margin: 0.5rem 0 1.5rem;
+  color: $color-border;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+// Single column, deliberately: this is a run in order, not a browsable
+// list — splitting it into columns would break the top-to-bottom sequence
+// a route sheet needs to read in.
+.route-sheet__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.route-sheet__skip {
+  padding: 1rem 0;
+  border-bottom: 1px solid $color-border-subtle;
+  break-inside: avoid;
+
+  h3 {
+    margin: 0 0 0.35rem;
+
+    a {
+      color: $color-text;
+      text-decoration: none;
+
+      &:hover {
+        color: $color-border;
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.route-sheet__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  margin: 0;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+}
+
+.route-sheet__meta-stars,
+.route-sheet__meta-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  color: $color-border;
+}
+
+// ---- Print (route sheet) ---------------------------------------------
+
+@media print {
+  // Site chrome and the "pick your skips" pane make no sense on paper:
+  // only the compiled "My route" list should print.
+  .site-header,
+  .site-footer,
+  .page-sticker,
+  .back-to-top,
+  #page-loading-bar,
+  .route-sheet__note,
+  .route-sheet__picker,
+  .route-sheet__summary-actions {
+    display: none !important;
+  }
+
+  // The dark theme would otherwise print a full-bleed dark background and
+  // yellow text, wasting ink and hurting legibility on paper.
+  * {
+    color: #000 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  main {
+    max-width: none;
+    padding: 0;
+  }
+
+  // Back to a plain single block now that the picker pane beside it is
+  // hidden — no more two-column grid or sticky positioning to print.
+  .route-sheet__layout {
+    display: block;
+  }
+
+  .route-sheet__summary {
+    position: static;
+    padding: 0;
+    border: 0;
+  }
+
+  .route-sheet__skip {
+    break-inside: avoid;
+  }
 }

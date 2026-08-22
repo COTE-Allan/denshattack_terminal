@@ -1,0 +1,38 @@
+---
+import { ArrowLeft } from '@lucide/astro';
+
+const { href, label } = Astro.props;
+---
+
+<p class="breadcrumb">
+  <a href={href} data-backlink>
+    <ArrowLeft size={14} aria-hidden="true" />
+    <span data-backlink-label>{label}</span>
+  </a>
+</p>
+
+<script>
+  // A skip linked from /practice or /route-sheet carries ?from=... so this
+  // link can point back to whichever list actually sent the visitor here,
+  // instead of always the generic catalogue — this is a static site, so
+  // reading that context has to happen client-side, from the real URL.
+  const FROM = {
+    practice: { href: '/practice', label: 'Back to practice checklist' },
+    'route-sheet': { href: '/route-sheet', label: 'Back to route sheet' },
+  };
+
+  function applyFromParam() {
+    const match = FROM[new URLSearchParams(window.location.search).get('from')];
+    if (!match) return;
+
+    document.querySelectorAll('[data-backlink]').forEach((link) => {
+      link.setAttribute('href', match.href);
+      const label = link.querySelector('[data-backlink-label]');
+      if (label) label.textContent = match.label;
+    });
+  }
+
+  // Fires on the initial load and after every view transition, so this
+  // keeps working without needing to re-run anything manually.
+  document.addEventListener('astro:page-load', applyFromParam);
+</script>

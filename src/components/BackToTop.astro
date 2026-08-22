@@ -1,0 +1,26 @@
+---
+import { ArrowUp } from '@lucide/astro';
+---
+
+<button class="back-to-top" type="button" id="back-to-top" aria-label="Back to top" hidden>
+  <ArrowUp size={20} aria-hidden="true" />
+</button>
+
+<script>
+  // `getElementById` runs fresh on every scroll/click instead of caching a
+  // reference, so this keeps working after a view transition swaps in a new
+  // button element on the next page — same reasoning as CopyLinkButton.astro.
+  window.addEventListener(
+    'scroll',
+    () => {
+      const btn = document.getElementById('back-to-top');
+      if (btn) btn.hidden = window.scrollY < 600;
+    },
+    { passive: true }
+  );
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest?.('#back-to-top');
+    if (btn) window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+</script>

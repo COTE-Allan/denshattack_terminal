@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import BackLink from '../../components/BackLink.astro';
 import SubmitForm from '../../components/SubmitForm.jsx';
 import { restBase } from '../../lib/wp.js';
 
@@ -16,7 +17,7 @@ const fields = [
 
 <Base title="Add a sticker" description="Submit a new sticker for review.">
   <main>
-    <p class="breadcrumb"><a href="/stickers/">Back to stickers</a></p>
+    <BackLink href="/stickers/" label="Back to stickers" />
 
     <h1 class="detail__title">Add a sticker</h1>
     <p class="submit-form__intro">

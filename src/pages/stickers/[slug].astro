@@ -1,5 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
+import BackLink from '../../components/BackLink.astro';
+import CopyLinkButton from '../../components/CopyLinkButton.astro';
 import { getStickers } from '../../lib/wp.js';
 
 /**
@@ -18,9 +20,13 @@ export async function getStaticPaths() {
 const { sticker: s } = Astro.props;
 ---
 
-<Base title={s.title} description={s.artist ? `By ${s.artist}` : ''}>
+<Base
+  title={s.title}
+  description={s.artist ? `By ${s.artist}` : ''}
+  image={s.screenshot || s.image || ''}
+>
   <main class="sticker-page">
-    <p class="breadcrumb"><a href="/stickers/">Back to stickers</a></p>
+    <BackLink href="/stickers/" label="Back to stickers" />
 
     <article>
       <h1 class="detail__title">{s.title}</h1>
@@ -66,6 +72,8 @@ const { sticker: s } = Astro.props;
           </a>
         </div>
       )}
+
+      <CopyLinkButton />
     </article>
   </main>
 </Base>

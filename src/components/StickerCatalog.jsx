@@ -1,6 +1,18 @@
 import { useMemo, useState } from 'react';
 import { isRecent } from '../lib/format.js';
-import { Card, Select } from './CatalogUI.jsx';
+import { Card, Select, SortSelect } from './CatalogUI.jsx';
+
+const SORTS = {
+  name: (a, b) => a.title.localeCompare(b.title, 'fr', { numeric: true }),
+  recent: (a, b) => new Date(b.modified) - new Date(a.modified),
+  artist: (a, b) => (a.artist || '').localeCompare(b.artist || '', 'fr', { numeric: true }),
+};
+
+const SORT_OPTIONS = [
+  { value: 'name', label: 'Name (A–Z)' },
+  { value: 'recent', label: 'Most recent' },
+  { value: 'artist', label: 'Artist (A–Z)' },
+];
 
 /**
  * Same client-side search/filter pattern as Catalog.jsx (skips), over the
@@ -9,8 +21,9 @@ import { Card, Select } from './CatalogUI.jsx';
 export default function StickerCatalog({ stickers, facets }) {
   const [search, setSearch] = useState('');
   const [artist, setArtist] = useState('');
+  const [sort, setSort] = useState('name');
 
-  const results = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
 
     return stickers.filter((s) => {
@@ -20,11 +33,20 @@ export default function StickerCatalog({ stickers, facets }) {
     });
   }, [stickers, search, artist]);
 
+  const results = useMemo(() => [...filtered].sort(SORTS[sort]), [filtered, sort]);
+
   const hasFilters = search || artist;
 
   function reset() {
     setSearch('');
     setArtist('');
+  }
+
+  // Clicking a tag pill just runs it through the same search box the
+  // "Name or tag" input already filters on, so it doesn't need its own
+  // separate matching logic.
+  function searchTag(tag) {
+    setSearch((current) => (current.trim().toLowerCase() === tag.toLowerCase() ? '' : tag));
   }
 
   return (
@@ -56,9 +78,31 @@ export default function StickerCatalog({ stickers, facets }) {
         )}
       </div>
 
-      <p className="catalog__count" aria-live="polite">
-        {results.length} sticker{results.length > 1 ? 's' : ''}
-      </p>
+      {facets.tags.length > 0 && (
+        <ul className="pill-list">
+          {facets.tags.map((tag) => (
+            <li key={tag}>
+              <button
+                type="button"
+                className={
+                  search.trim().toLowerCase() === tag.toLowerCase() ? 'pill pill--active' : 'pill'
+                }
+                onClick={() => searchTag(tag)}
+              >
+                {tag}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="catalog__toolbar">
+        <p className="catalog__count" aria-live="polite">
+          {results.length} sticker{results.length > 1 ? 's' : ''}
+        </p>
+
+        <SortSelect value={sort} onChange={setSort} options={SORT_OPTIONS} />
+      </div>
 
       {results.length === 0 ? (
         <p className="catalog__empty">
