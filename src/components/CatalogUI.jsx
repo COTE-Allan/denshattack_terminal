@@ -7,30 +7,40 @@ import { Fragment } from 'react';
  */
 
 /**
- * One grid card: optional cover media, title, optional summary, and a list
- * of meta facts rendered as a definition list.
+ * One grid card: cover media (or a placeholder, so every card keeps the
+ * same media-slot height even without a thumbnail), title, optional
+ * summary, and a list of meta facts rendered as a definition list.
  *
  * `meta` entries: { label, value, className?, attrs? }. `attrs` is spread
  * onto the <dd>, used for styling hooks like data-level, or a title
  * attribute for a tooltip. Falsy entries in `meta` are skipped, so callers
  * can write `s.level && { label: 'Level', value: s.level }` inline.
+ *
+ * `badge`, when set, renders a small pill over the top-left of the media
+ * slot (e.g. "New").
  */
-export function Card({ href, media, title, summary, meta = [] }) {
+export function Card({ href, media, title, summary, meta = [], badge }) {
   const entries = meta.filter(Boolean);
 
   return (
     <li className="card">
       <a className="card__link" href={href}>
-        {media?.src && (
-          <div className="card__media">
+        <div className="card__media">
+          {badge && <span className="card__badge">{badge}</span>}
+
+          {media?.src ? (
             <img
               className="card__media-thumb"
               src={media.src}
               alt={media.alt || ''}
               loading="lazy"
             />
-          </div>
-        )}
+          ) : (
+            <div className="card__media-placeholder" aria-hidden="true">
+              🎮
+            </div>
+          )}
+        </div>
 
         <div className="card__body">
           <h2 className="card__title">{title}</h2>

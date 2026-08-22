@@ -3,6 +3,7 @@ import {
   TIME_SAVE_TIERS,
   difficultyStars,
   formatSeconds,
+  isRecent,
   timeSaveIcons,
   timeSaveTier,
   youtubeId,
@@ -49,7 +50,7 @@ export default function Catalog({ skips, facets }) {
   }
 
   return (
-    <div className="catalog">
+    <div className="catalog catalog--skips">
       {/* No <form>: nothing is submitted, filtering is live. */}
       <div className="catalog__filters">
         <label className="filter">
@@ -153,6 +154,7 @@ function SkipCard({ skip: s }) {
       title={s.title}
       summary={s.summary}
       meta={skipMeta(s)}
+      badge={isRecent(s.modified) ? 'New!' : null}
     />
   );
 }

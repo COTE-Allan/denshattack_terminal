@@ -52,6 +52,19 @@ export function difficultyStars(difficulty, max = 5) {
   return '⭐'.repeat(Math.min(Math.round(n), max));
 }
 
+/**
+ * Whether a WordPress `modified` timestamp falls within the last `days`
+ * days, for a "New" badge on catalogue cards. Evaluated at build time, so
+ * the badge is only as fresh as the last build/deploy, not the visitor's
+ * clock — fine for a site that rebuilds on every content change, but it
+ * won't clear itself if the site then goes a while without a rebuild.
+ */
+export function isRecent(modified, days = 7) {
+  const modifiedAt = new Date(modified).getTime();
+  if (Number.isNaN(modifiedAt)) return false;
+  return Date.now() - modifiedAt < days * 24 * 60 * 60 * 1000;
+}
+
 /** Pull a YouTube video id out of any of the usual URL shapes. */
 export function youtubeId(url) {
   const m = String(url || '').match(

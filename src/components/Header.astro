@@ -1,13 +1,16 @@
 ---
 import logo from '../assets/logo_denshattack_terminal.png';
 
-const links = [
+const speedrunLinks = [
   { label: 'Skips', href: '/' },
   { label: 'Techniques', href: '/techniques' },
-  { label: 'Stickers', href: '/stickers' },
 ];
 
+const links = [{ label: 'Stickers', href: '/stickers' }];
+
 const path = Astro.url.pathname;
+const isCurrent = (href) => path === href || path === `${href}/`;
+const isSpeedrunActive = speedrunLinks.some((l) => isCurrent(l.href));
 ---
 
 <header class="site-header">
@@ -24,13 +27,45 @@ const path = Astro.url.pathname;
 
     <nav class="site-header__nav" aria-label="Main navigation">
       <ul class="site-header__nav-list">
+        <li class="site-header__nav-item">
+          {/*
+            <details>/<summary> gives a click-to-open, keyboard-accessible
+            dropdown with no client-side framework needed. The outside-click
+            listener below is the only bit of JS: <details> otherwise stays
+            open until its own summary is clicked again.
+          */}
+          <details class="nav-dropdown">
+            <summary
+              class="site-header__nav-link nav-dropdown__summary"
+              aria-current={isSpeedrunActive ? 'page' : undefined}
+            >
+              Speedrun
+            </summary>
+            <ul class="nav-dropdown__menu">
+              {
+                speedrunLinks.map((l) => (
+                  <li>
+                    <a
+                      class="nav-dropdown__link"
+                      href={l.href}
+                      aria-current={isCurrent(l.href) ? 'page' : undefined}
+                    >
+                      {l.label}
+                    </a>
+                  </li>
+                ))
+              }
+            </ul>
+          </details>
+        </li>
+
         {
           links.map((l) => (
             <li class="site-header__nav-item">
               <a
                 class="site-header__nav-link"
                 href={l.href}
-                aria-current={path === l.href || path === `${l.href}/` ? 'page' : undefined}
+                aria-current={isCurrent(l.href) ? 'page' : undefined}
               >
                 {l.label}
               </a>
@@ -41,3 +76,13 @@ const path = Astro.url.pathname;
     </nav>
   </div>
 </header>
+
+<script>
+  document.querySelectorAll('.nav-dropdown').forEach((dropdown) => {
+    document.addEventListener('click', (e) => {
+      if (dropdown.hasAttribute('open') && !dropdown.contains(e.target)) {
+        dropdown.removeAttribute('open');
+      }
+    });
+  });
+</script>

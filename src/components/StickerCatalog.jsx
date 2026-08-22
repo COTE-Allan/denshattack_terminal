@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { isRecent } from '../lib/format.js';
 import { Card, Select } from './CatalogUI.jsx';
 
 /**
@@ -27,7 +28,7 @@ export default function StickerCatalog({ stickers, facets }) {
   }
 
   return (
-    <div className="catalog">
+    <div className="catalog catalog--stickers">
       <div className="catalog__filters">
         <label className="filter">
           <span className="filter__label">Search</span>
@@ -74,8 +75,14 @@ export default function StickerCatalog({ stickers, facets }) {
               title={s.title}
               meta={[
                 s.artist && { label: 'Artist', value: s.artist },
-                s.tags.length > 0 && { label: 'Tags', value: s.tags.join(', ') },
+                s.tags.length > 0 && {
+                  label: 'Tags',
+                  value: s.tags.join(', '),
+                  className: 'card__meta-value--truncate',
+                  attrs: { title: s.tags.join(', ') },
+                },
               ]}
+              badge={isRecent(s.modified) ? 'New!' : null}
             />
           ))}
         </ul>

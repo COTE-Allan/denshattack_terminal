@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { youtubeId } from '../lib/format.js';
+import { isRecent, youtubeId } from '../lib/format.js';
 import { Card } from './CatalogUI.jsx';
 
 /**
@@ -11,11 +11,23 @@ export default function TechniqueCatalog({ techniques }) {
 
   const results = useMemo(() => {
     const q = search.trim().toLowerCase();
+    if (!q) return techniques.map((t) => ({ technique: t, matchedVariant: null }));
 
-    return techniques.filter((t) => {
-      if (q && !`${t.title} ${t.summary}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
+    return techniques
+      .map((t) => {
+        // Search the technique's own text first...
+        if (`${t.title} ${t.summary}`.toLowerCase().includes(q)) {
+          return { technique: t, matchedVariant: null };
+        }
+        // ...then each variant's, so a word that only appears in a variant
+        // still surfaces the parent technique (variants don't get their own
+        // grid entry).
+        const matchedVariant = t.variants.find((v) =>
+          `${v.title} ${v.summary}`.toLowerCase().includes(q)
+        );
+        return matchedVariant ? { technique: t, matchedVariant } : null;
+      })
+      .filter(Boolean);
   }, [techniques, search]);
 
   const hasFilters = search;
@@ -25,7 +37,7 @@ export default function TechniqueCatalog({ techniques }) {
   }
 
   return (
-    <div className="catalog">
+    <div className="catalog catalog--techniques">
       <div className="catalog__filters">
         <label className="filter">
           <span className="filter__label">Search</span>
@@ -34,7 +46,7 @@ export default function TechniqueCatalog({ techniques }) {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Name or description"
+            placeholder="Name, description, or a variant's"
           />
         </label>
 
@@ -56,8 +68,8 @@ export default function TechniqueCatalog({ techniques }) {
         </p>
       ) : (
         <ul className="catalog__list">
-          {results.map((t) => (
-            <TechniqueCard key={t.id} technique={t} />
+          {results.map(({ technique: t, matchedVariant }) => (
+            <TechniqueCard key={t.id} technique={t} matchedVariant={matchedVariant} />
           ))}
         </ul>
       )}
@@ -66,7 +78,7 @@ export default function TechniqueCatalog({ techniques }) {
 }
 
 /** A single catalogue card, using the linked video's YouTube thumbnail as cover. */
-function TechniqueCard({ technique: t }) {
+function TechniqueCard({ technique: t, matchedVariant }) {
   const videoId = youtubeId(t.youtubeLink);
 
   return (
@@ -74,13 +86,20 @@ function TechniqueCard({ technique: t }) {
       href={`/techniques/${t.slug}/`}
       media={videoId ? { src: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` } : null}
       title={t.title}
-      summary={t.summary}
+      summary={matchedVariant ? matchedVariant.summary : t.summary}
       meta={[
         t.variants.length > 0 && {
           label: 'Variants',
           value: t.variants.length,
         },
+        // The search only matched inside a variant, not the technique's own
+        // text, so say which one is why this card is showing up.
+        matchedVariant && {
+          label: 'Matches variant',
+          value: matchedVariant.title,
+        },
       ]}
+      badge={isRecent(t.modified) ? 'New!' : null}
     />
   );
 }
