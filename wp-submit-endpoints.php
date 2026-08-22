@@ -11,9 +11,10 @@
  * (wp_handle_upload, wp_check_filetype_and_ext), the safest way to accept
  * a file from an anonymous public form.
  *
- * NOTE: the post type keys are "skip" / "sticker" (singular). That's the
- * real WordPress post_type slug registered by ACF, distinct from the
- * plural "skips"/"stickers" GraphQL type name used in queries.
+ * NOTE: the post type keys are "skip" / "sticker" / "technique" (singular).
+ * That's the real WordPress post_type slug registered by ACF, distinct from
+ * the plural "skips"/"stickers"/"techniques" GraphQL type name used in
+ * queries.
  */
 
 // --- CORS: the static site lives on a different domain than this WP install ---
@@ -263,6 +264,57 @@ add_action( 'rest_api_init', function () {
 			}
 			if ( $screenshot_id ) {
 				update_field( 'screenshot', $screenshot_id, $post_id );
+			}
+
+			return new WP_REST_Response( array( 'ok' => true ), 200 );
+		},
+	) );
+
+	register_rest_route( 'denshattack/v1', '/submit-technique', array(
+		'methods'             => 'POST',
+		'permission_callback' => '__return_true', // public, anonymous submissions
+		'callback'            => function ( WP_REST_Request $req ) {
+			$data = $req->get_params();
+
+			if ( densha_honeypot_tripped( $data ) ) {
+				// Pretend it worked so the bot doesn't learn to skip the field.
+				return new WP_REST_Response( array( 'ok' => true ), 200 );
+			}
+
+			if ( ! densha_rate_limit_ok( 'technique' ) ) {
+				return new WP_Error( 'rate_limited', 'Too many submissions, try again later.', array( 'status' => 429 ) );
+			}
+
+			$name = sanitize_text_field( $data['name'] ?? '' );
+			if ( $name === '' ) {
+				return new WP_Error( 'missing_name', 'Name is required.', array( 'status' => 400 ) );
+			}
+
+			$post_id = wp_insert_post( array(
+				'post_type'   => 'technique', // real post_type key registered by ACF (singular)
+				'post_status' => 'pending', // awaits review, not public until approved
+				'post_title'  => $name,
+			), true );
+
+			if ( is_wp_error( $post_id ) ) {
+				return $post_id;
+			}
+
+			update_field( 'name', $name, $post_id );
+			// NOTE: ACF's actual field name (the "Field Name" in wp-admin, used as the
+			// meta key) may be snake_case here even though WPGraphQL exposes it as
+			// camelCase for reads, same as the skip/sticker fields above. If this
+			// doesn't save, check Custom Fields > techniqueData in wp-admin for the
+			// real field name.
+			update_field( 'youtube_link', esc_url_raw( $data['youtubeLink'] ?? '' ), $post_id );
+			update_field( 'description', sanitize_textarea_field( $data['description'] ?? '' ), $post_id );
+
+			// "Variant of" is submitted as the parent technique's post ID (the
+			// submission form's dropdown carries the ID as its value, the
+			// technique's name as its visible label).
+			$variant_of_id = (int) ( $data['variantOf'] ?? 0 );
+			if ( $variant_of_id > 0 && get_post_type( $variant_of_id ) === 'technique' ) {
+				update_field( 'variant_of', $variant_of_id, $post_id );
 			}
 
 			return new WP_REST_Response( array( 'ok' => true ), 200 );

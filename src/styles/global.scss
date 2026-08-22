@@ -38,7 +38,7 @@ body {
   height: auto;
   transform: rotate(-8deg);
   pointer-events: none;
-  z-index: 1;
+  z-index: -1;
   opacity: 30%;
 }
 
@@ -239,7 +239,9 @@ main {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  // 300px fits 3 columns within the page's 1000px content width (minus its
+  // gutters and the 2 gaps between cards) on a desktop screen.
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   align-items: start; // cards keep their own height, don't stretch to match tallest sibling
   gap: 1.5rem;
 }
@@ -420,10 +422,13 @@ main {
   }
 }
 
-// Responsive 16:9 video embed.
+// Responsive 16:9 video embed. Capped at 480px wide so every detail page
+// (skip, technique, ...) shows demonstration videos at the same size,
+// regardless of how wide the page's content column is.
 .detail__video {
   position: relative;
   aspect-ratio: 16 / 9;
+  max-width: 480px;
   margin: 0 0 1.75rem;
   border: 2px solid $color-border;
   border-radius: $radius;
@@ -466,6 +471,45 @@ main {
   background: #000;
   border-radius: calc(#{$radius} - 4px);
   flex-shrink: 0;
+}
+
+// Note on a variant's own page, linking back to the technique it's a variant of.
+.technique-page__variant-of {
+  color: $color-text-muted;
+  margin: -1rem 0 1.75rem;
+
+  a {
+    color: $color-border;
+    text-decoration: underline;
+  }
+}
+
+// Links to the other techniques that point back at this one via variantOf.
+.technique-page__variants {
+  margin: 2rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 2px solid $color-border-subtle;
+
+  h2 {
+    font-size: 1.1rem;
+    margin: 0 0 1rem;
+  }
+}
+
+// One variant's full write-up, inlined below the main technique.
+.technique-page__variant {
+  padding-top: 1.5rem;
+  margin: 0 0 1.5rem;
+  border-top: 2px solid $color-border-subtle;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  h3 {
+    font-size: 1rem;
+    margin: 0 0 0.75rem;
+  }
 }
 
 // Generic pill button, used for CTAs on detail pages (download, watch demo)
@@ -568,6 +612,29 @@ main {
 .submit-form__error {
   color: #ff6b6b;
   font-size: 0.85rem;
+}
+
+// ---- Footer --------------------------------------------------------------
+
+.site-footer {
+  padding: 1.5rem 1.5rem 3rem;
+}
+
+.site-footer__inner {
+  max-width: $max-width;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.site-footer__text {
+  margin: 0;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+}
+
+.site-footer__link {
+  color: $color-border;
+  text-decoration: underline;
 }
 
 // Visually hidden from everyone except bots that fill in every field blindly.

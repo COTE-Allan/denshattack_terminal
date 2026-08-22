@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getTechniques } from '../../lib/wp.js';
+import { youtubeId, youtubeStart } from '../../lib/format.js';
 
 /**
  * One static page per technique.
@@ -16,69 +17,91 @@ export async function getStaticPaths() {
 }
 
 const { technique: t } = Astro.props;
+const videoId = youtubeId(t.youtubeLink);
+const videoStart = youtubeStart(t.youtubeLink);
 ---
 
 <Base title={t.title} description={t.summary}>
   <main class="technique-page">
-    <p class="breadcrumb"><a href="/">Back to catalogue</a></p>
+    <p class="breadcrumb"><a href="/techniques/">Back to techniques</a></p>
 
     <article>
-      <h1>{t.title}</h1>
+      <h1 class="detail__title">{t.title}</h1>
 
-      <dl class="technique-page__meta">
-        {t.difficulty > 0 && (
-          <>
-            <dt>Difficulty</dt>
-            <dd>{t.difficulty}/5</dd>
-          </>
-        )}
-        {t.timeSave != null && (
-          <>
-            <dt>Time save</dt>
-            <dd>{t.timeSave}s</dd>
-          </>
-        )}
-        {t.inputWindow && (
-          <>
-            <dt>Input window</dt>
-            <dd>{t.inputWindow}</dd>
-          </>
-        )}
-        {t.gameVersion && (
-          <>
-            <dt>Version</dt>
-            <dd>{t.gameVersion}</dd>
-          </>
-        )}
-        {t.status && (
-          <>
-            <dt>Status</dt>
-            <dd data-status={t.status}>{t.status}</dd>
-          </>
-        )}
-      </dl>
-
-      {t.categories.length > 0 && (
-        <ul class="technique-page__tags">
-          {t.categories.map((c) => <li>{c}</li>)}
-        </ul>
+      {t.variantOfSlug && (
+        <p class="technique-page__variant-of">
+          Variant of{' '}
+          <a href={`/techniques/${t.variantOfSlug}/`}>{t.variantOfTitle}</a>
+        </p>
       )}
 
       {/*
-        set:html renders the WordPress editor output as real HTML.
-        Safe here because this content only ever comes from the admin;
-        community submissions are stripped of all tags server-side and
-        still have to be approved before they reach a build.
+        set:html renders the ACF description as real HTML.
+        Safe because this content only ever comes from the admin.
       */}
-      <div class="technique-page__body" set:html={t.content} />
+      {t.description && (
+        <div class="detail__body" set:html={t.description} />
+      )}
 
-      {t.videoUrl && (
-        <p class="technique-page__video">
-          <a href={t.videoUrl} target="_blank" rel="noopener nofollow">
-            Watch the demonstration
-          </a>
-        </p>
+      {videoId ? (
+        <div class="detail__video">
+          {/* youtube-nocookie: no tracking cookie until the visitor plays. */}
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${videoId}${videoStart ? `?start=${videoStart}` : ''}`}
+            title={`Demonstration: ${t.title}`}
+            loading="lazy"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+          ></iframe>
+        </div>
+      ) : (
+        t.youtubeLink && (
+          <p class="technique-page__video-link">
+            <a class="btn" href={t.youtubeLink} target="_blank" rel="noopener nofollow">
+              Watch the demonstration
+            </a>
+          </p>
+        )
       )}
     </article>
+
+    {t.variants.length > 0 && (
+      <section class="technique-page__variants">
+        <h2>Variants</h2>
+
+        {t.variants.map((v) => {
+          const variantVideoId = youtubeId(v.youtubeLink);
+          const variantVideoStart = youtubeStart(v.youtubeLink);
+
+          return (
+            <article class="technique-page__variant">
+              <h3>{v.title}</h3>
+
+              {v.description && <div class="detail__body" set:html={v.description} />}
+
+              {variantVideoId ? (
+                <div class="detail__video">
+                  <iframe
+                    src={`https://www.youtube-nocookie.com/embed/${variantVideoId}${variantVideoStart ? `?start=${variantVideoStart}` : ''}`}
+                    title={`Demonstration: ${v.title}`}
+                    loading="lazy"
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                  ></iframe>
+                </div>
+              ) : (
+                v.youtubeLink && (
+                  <p class="technique-page__video-link">
+                    <a class="btn" href={v.youtubeLink} target="_blank" rel="noopener nofollow">
+                      Watch the demonstration
+                    </a>
+                  </p>
+                )
+              )}
+            </article>
+          );
+        })}
+      </section>
+    )}
   </main>
 </Base>

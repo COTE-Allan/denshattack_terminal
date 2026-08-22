@@ -10,6 +10,11 @@
  *
  * Field group: stickerData
  * Fields:      name, artist, tags, stickerImage, screenshot
+ *
+ * Field group: techniqueData
+ * Fields:      name, description, youtubeLink, variantOf (post object,
+ *              points at another `technique` post — this post is a variant
+ *              of that one)
  */
 
 const ENDPOINT = import.meta.env.WP_GRAPHQL_URL;
@@ -124,6 +129,38 @@ const STICKERS = /* GraphQL */ `
   }
 `;
 
+const TECHNIQUES = /* GraphQL */ `
+  query AllTechniques {
+    techniques(first: 500) {
+      edges {
+        node {
+          id
+          databaseId
+          slug
+          title
+          modified
+          techniqueData {
+            description
+            name
+            youtubeLink
+            variantOf {
+              nodes {
+                ... on Technique {
+                  id
+                  slug
+                  techniqueData {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
 /** Strip tags, collapse whitespace. Used for meta descriptions and previews. */
 function plain(html) {
   return String(html || '')
@@ -227,6 +264,61 @@ export async function getStickers() {
   });
 
   return stickers.sort((a, b) => a.title.localeCompare(b.title, 'fr', { numeric: true }));
+}
+
+/**
+ * Flatten the GraphQL shape into plain objects the React island can filter
+ * over without digging through nested fields on every keystroke.
+ *
+ * Variants are just regular technique posts that point back at another one
+ * through `variantOf`, so each technique in the returned list also carries
+ * a `variants` array: the *other* techniques that point back at it. Built
+ * as a second pass since a post's variants aren't knowable from its own
+ * GraphQL node, only from every other node's `variantOf`.
+ */
+export async function getTechniques() {
+  const data = await query(TECHNIQUES);
+
+  const techniques = (data.techniques?.edges ?? []).map(({ node: n }) => {
+    const d = n.techniqueData ?? {};
+
+    // The ACF name field wins over the WordPress post title.
+    const title = (d.name || n.title || 'Untitled').trim();
+    const description = toHtml(d.description);
+    const text = plain(d.description);
+    // Exposed as a connection even though the ACF field only ever holds one
+    // post ("Select multiple values?" is off), so take the first node.
+    const parent = d.variantOf?.nodes?.[0];
+
+    return {
+      id: n.id,
+      // The plain WordPress post ID, needed to submit this post as a parent
+      // via the "variant of" field on the submission form.
+      databaseId: n.databaseId,
+      // Fall back to the numeric id if a post has no usable slug.
+      slug: n.slug || String(n.databaseId),
+      title,
+      description,
+      summary: truncate(text),
+      youtubeLink: d.youtubeLink || '',
+      variantOfId: parent?.id || null,
+      variantOfSlug: parent?.slug || '',
+      variantOfTitle: (parent?.techniqueData?.name || '').trim(),
+      variants: [], // filled in below
+      modified: n.modified,
+    };
+  });
+
+  const byId = new Map(techniques.map((t) => [t.id, t]));
+  for (const t of techniques) {
+    if (!t.variantOfId) continue;
+    const parent = byId.get(t.variantOfId);
+    // Each variant carries its own full data (description, video, ...) so
+    // the parent's detail page can render it inline, not just link to it.
+    if (parent) parent.variants.push(t);
+  }
+
+  return techniques.sort((a, b) => a.title.localeCompare(b.title, 'fr', { numeric: true }));
 }
 
 /** Distinct non-empty values of a scalar field, for the filter dropdowns. */

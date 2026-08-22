@@ -109,11 +109,18 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
               required={f.required}
             >
               <option value="">Select…</option>
-              {f.options.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
+              {f.options.map((o) => {
+                // Plain strings double as both value and label (skip levels,
+                // difficulty). Object options let a field show a friendlier
+                // label than the value actually submitted (e.g. a technique
+                // name in the UI, its post ID in the request).
+                const { value, label } = typeof o === 'string' ? { value: o, label: o } : o;
+                return (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                );
+              })}
             </select>
           ) : f.type === 'file' ? (
             <input
