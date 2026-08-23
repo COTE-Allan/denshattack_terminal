@@ -9,8 +9,33 @@
   box-sizing: border-box;
 }
 
+// Rough resting height of .site-header, used to pull the homepage hero up
+// underneath it (see .hero) so the hero starts at the true top of the page
+// instead of below the header. Kept in sync with the header's own
+// padding/logo-size change in the max-width: 720px block further down.
+:root {
+  --header-h: 6.7rem;
+}
+
 body {
   margin: 0;
+  // Makes body itself the containing block for .page-sticker's absolute
+  // positioning, instead of leaving it to resolve against the initial
+  // containing block (viewport-sized, not document-sized) — that ambiguity
+  // is what let the sticker end up pinned near the fold on scrollable pages
+  // instead of at the true bottom of the document.
+  position: relative;
+  overflow-x: hidden; // .hero breaks out to 100vw; this keeps that from adding a horizontal scrollbar
+  // Sticky footer: body is at least a full screen tall and laid out as a
+  // column, so .site-footer's margin-top: auto can push it down to the
+  // bottom on short pages (see .site-footer). 100dvh after the 100vh
+  // fallback avoids the classic mobile bug where 100vh is taller than the
+  // actually-visible viewport (browser chrome included), which made the
+  // footer overshoot past the bottom of the screen.
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   // A very faint yellow glow at the top of the page (sits behind the header,
   // which paints its own opaque background so it just frames it), plus a
   // halftone of yellow dots creeping in from both screen edges. Every dot
@@ -27,20 +52,21 @@ body {
   line-height: 1.5;
 }
 
-// Decorative sticker, anchored to the bottom-right of the page (not the
-// viewport: no positioned ancestor, so it sits at the bottom of the full
-// document and scrolls away with the content, like the dot pattern).
+// Decorative sticker, anchored to the bottom-right of the full document
+// (body is its containing block, see above) rather than the viewport, so it
+// sits at the true bottom of the page and scrolls away with the content
+// like the dot pattern, even on pages long enough to need scrolling.
 .page-sticker {
   position: absolute;
   right: 2.5rem;
-  bottom: 2.5rem;
+  bottom: 4.5rem;
   width: 400px;
   max-width: 90vw;
   height: auto;
   transform: rotate(-8deg);
   pointer-events: none;
   z-index: -1;
-  opacity: 30%;
+  opacity: 20%;
 }
 
 // Below tablet width there just isn't room for these decorations without
@@ -439,6 +465,10 @@ main {
 // trims down a size or two from desktop: a mobile header stacked into
 // several rows adds up fast if each row is full-sized.
 @media (max-width: 720px) {
+  :root {
+    --header-h: 5rem;
+  }
+
   .site-header {
     position: static;
     padding: 0.85rem 1rem 0;
@@ -683,22 +713,25 @@ main {
 
 // ---- Stats page ------------------------------------------------------
 
+// Flex instead of a minmax() grid: a grid's auto-fill can't drop below its
+// column minimum, which forced a single column on narrow screens. Flex-wrap
+// lets tiles shrink and wrap freely, so there's always more than one per row
+// when the width allows it.
 .stat-grid {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  // Wide enough that the longest label ("Techniques catalogued", icon
-  // included) fits on one line at this font-size — see .stat-tile__label.
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 1.25rem;
 }
 
 .stat-tile {
-  // Grid items default to min-width: auto, so a long unbroken value (a
-  // contributor's name) would otherwise force the tile — and the whole
-  // grid track — wider than its column instead of wrapping.
-  min-width: 0;
+  // Grows to fill leftover row space, starts from 200px, but won't shrink
+  // past its label's own one-line width (see .stat-tile__label) — that's
+  // what sends a whole tile to the next row instead of wrapping the label
+  // text inside it.
+  flex: 1 1 200px;
   background: $color-card-bg;
   border: 2px solid $color-border-subtle;
   border-radius: $radius;
@@ -714,12 +747,10 @@ main {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  // Icon + text stay on one line (the grid's 260px minimum column width is
-  // sized for this); overflow: hidden is just a safety net if a future
-  // label ends up longer than "Techniques catalogued" on a very narrow
-  // screen, so it clips instead of visually breaking the tile.
+  // Keeps "Techniques catalogued" (the longest label) on one line; left at
+  // the flex item's default min-width: auto, this is what the tile refuses
+  // to shrink below.
   white-space: nowrap;
-  overflow: hidden;
 
   svg {
     flex-shrink: 0;
@@ -1225,9 +1256,65 @@ main {
 
 // ---- Homepage ----------------------------------------------------------
 
+// Cancels <main>'s own top padding: the hero needs to sit flush against
+// main's top edge (= the header's bottom edge) for its negative margin-top
+// to land it exactly at the page's y: 0.
+.home-page {
+  padding-top: 0;
+}
+
+// Full page width and pulled up by the header's own height so it starts at
+// the very top of the page (y: 0), with the sticky header floating over it —
+// same trick as .page-sticker, just horizontal: break out of <main>'s
+// max-width with a negative-margin/100vw combo. Height is clamped rather
+// than left to its content: tall enough to feel like a banner, capped so
+// the "What's new" section still peeks in at the bottom of the initial
+// viewport as a scroll invitation.
 .hero {
+  position: relative;
+  // Negative, not just lower than the header's: on mobile the header drops
+  // to position: static (see the max-width: 720px block), and a static
+  // element always paints above a positioned sibling regardless of z-index
+  // number — only a negative z-index reliably stays under it in both cases.
+  z-index: -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-top: calc(-1 * var(--header-h));
+  padding: calc(var(--header-h) + 2rem) 1.5rem 2rem;
+  height: clamp(460px, 64vh, 660px);
+  overflow: hidden;
   text-align: center;
-  padding: 2.5rem 0 3rem;
+  // Same diagonal-cut language as .home-section/.site-footer, mirrored onto
+  // the bottom edge instead of the top: it rises left-to-right by the same
+  // 32px cut, so the two shapes read as one continuous zigzag down the page.
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 64px), 0 100%);
+}
+
+.hero__video {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// Darkens the video so the logo/tagline/buttons stay legible regardless of
+// what's playing behind them.
+.hero__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(#0a0a0a, 0.45), rgba(#0a0a0a, 0.75));
+}
+
+.hero__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .hero__logo {
@@ -1242,10 +1329,11 @@ main {
 }
 
 .hero__tagline {
-  color: $color-text-muted;
+  color: $color-text;
   font-size: 1.05rem;
   max-width: 520px;
   margin: 0 auto 2rem;
+  text-shadow: 0 1px 4px rgba(#0a0a0a, 0.6);
 }
 
 .hero__links {
@@ -1254,6 +1342,10 @@ main {
   justify-content: center;
   gap: 0.75rem;
   margin-top: 2rem;
+}
+
+.hero form {
+  min-width: 350px;
 }
 
 // Discord's own brand color instead of the site's yellow accent — the
@@ -1376,7 +1468,7 @@ main {
 // this reaches the full viewport edge to edge for free, no breakout trick
 // needed.
 .site-footer {
-  margin-top: 3rem;
+  margin-top: auto;
   padding: 3rem 1.5rem 2.5rem;
   background: $color-bg-header;
   clip-path: polygon(0 24px, 100% 0, 100% 100%, 0 100%);

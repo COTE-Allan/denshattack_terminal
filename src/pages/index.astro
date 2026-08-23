@@ -6,6 +6,7 @@ import { Card } from '../components/CatalogUI.jsx';
 import { getAllContent } from '../lib/wp.js';
 import { isRecent, TYPE_LABELS } from '../lib/format.js';
 import logo from '../assets/logo_denshattack_terminal.png';
+import heroVideo from '../assets/hero_banner_video.webm';
 
 const RECENT_DAYS = 30;
 const MAX_HOME_ITEMS = 6;
@@ -23,33 +24,45 @@ const recent = all
 >
   <main class="home-page">
     <section class="hero">
-      <h1 class="hero__logo">
-        <img
-          src={logo.src}
-          width={logo.width}
-          height={logo.height}
-          alt="Denshattack Station"
+      <video
+        class="hero__video"
+        src={heroVideo}
+        autoplay
+        muted
+        loop
+        playsinline
+      ></video>
+      <div class="hero__overlay"></div>
+
+      <div class="hero__content">
+        <h1 class="hero__logo">
+          <img
+            src={logo.src}
+            width={logo.width}
+            height={logo.height}
+            alt="Denshattack Station"
+          />
+        </h1>
+        <p class="hero__tagline">
+          The community platform for Denshattack fans and speedrunners: skips,
+          techniques, stickers, and more to come.
+        </p>
+
+        <SearchBox
+          resultsId="home-search-results"
+          size="large"
+          placeholder="Search skips, techniques, stickers…"
         />
-      </h1>
-      <p class="hero__tagline">
-        The community platform for Denshattack fans and speedrunners: skips,
-        techniques, stickers, and more to come.
-      </p>
 
-      <SearchBox
-        resultsId="home-search-results"
-        size="large"
-        placeholder="Search skips, techniques, stickers…"
-      />
-
-      <div class="hero__links">
-        <a class="btn" href="/skips/">Skips</a>
-        <a class="btn" href="/techniques/">Techniques</a>
-        <a class="btn" href="/stickers/">Stickers</a>
-        <a class="btn" href="/stats">Stats</a>
-        <a class="btn btn--discord" href="https://discord.gg/ewmbqvtYQj" target="_blank" rel="noopener">
-          <DiscordIcon size={16} /> Join the Discord
-        </a>
+        <div class="hero__links">
+          <a class="btn" href="/skips/">Skips</a>
+          <a class="btn" href="/techniques/">Techniques</a>
+          <a class="btn" href="/stickers/">Stickers</a>
+          <a class="btn" href="/stats">Stats</a>
+          <a class="btn btn--discord" href="https://discord.gg/ewmbqvtYQj" target="_blank" rel="noopener">
+            <DiscordIcon size={16} /> Join the Discord
+          </a>
+        </div>
       </div>
     </section>
 
