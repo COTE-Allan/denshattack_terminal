@@ -129,6 +129,50 @@ main {
   gap: 1rem;
 }
 
+// Just the logo on desktop (the toggle inside stays hidden there). On
+// mobile this becomes its own row — logo left, toggle right — laid out
+// with real flexbox instead of absolute positioning, which used to
+// overlap the logo regardless of how wide the logo image actually is.
+.site-header__brand-row {
+  display: flex;
+  align-items: center;
+}
+
+// Hidden above 720px — the full nav shows inline there instead. See the
+// mobile media query below for its shown state and .site-header__nav's
+// collapse/expand.
+.mobile-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: 2px solid $color-border-subtle;
+  border-radius: 50%;
+  background: transparent;
+  color: $color-text;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    border-color: $color-border;
+    color: $color-border;
+  }
+}
+
+.mobile-nav-toggle__icon--close {
+  display: none;
+}
+
+.site-header--nav-open .mobile-nav-toggle__icon--menu {
+  display: none;
+}
+
+.site-header--nav-open .mobile-nav-toggle__icon--close {
+  display: block;
+}
+
 .site-header__logo {
   display: inline-flex;
   align-items: center;
@@ -388,45 +432,65 @@ main {
   padding: 0.5rem 0.75rem;
 }
 
-// Below this width the logo + all four nav links no longer fit on one line
-// without overflowing, so stack them instead, both centered, and relax the
-// pill into a plain rounded rect since a 999px radius looks odd once the
-// box is taller than it is wide.
+// Below this width the logo + full nav no longer fit on one line without
+// overflowing. The nav collapses behind a hamburger toggle instead of
+// stacking everything open — search stays visible (it's used more often
+// than the nav links) below the logo/toggle row. Everything here also
+// trims down a size or two from desktop: a mobile header stacked into
+// several rows adds up fast if each row is full-sized.
 @media (max-width: 720px) {
   .site-header {
     position: static;
-    padding: 1.25rem 1rem 0;
+    padding: 0.85rem 1rem 0;
   }
 
   .site-header__inner {
     flex-direction: column;
+    align-items: stretch;
     justify-content: center;
-    border-radius: $radius * 2;
-    padding: 1.25rem;
+    border-radius: $radius * 1.5;
+    padding: 0.85rem 1rem;
+    gap: 0.75rem;
   }
 
-  .site-header__logo {
-    justify-content: center;
+  .site-header__brand-row {
+    justify-content: space-between;
+  }
+
+  .site-header__logo-img {
+    height: 2.25rem;
+  }
+
+  .mobile-nav-toggle {
+    display: flex;
+  }
+
+  // Collapsed by default; .site-header--nav-open (toggled by the button
+  // above) reveals it as its own full-width panel below the logo.
+  .site-header__nav {
+    display: none;
+    padding-top: 0.75rem;
+    border-top: 1px solid $color-border-subtle;
+  }
+
+  .site-header--nav-open .site-header__nav {
+    display: block;
   }
 
   .site-header__nav-list {
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.6rem;
+    gap: 0.5rem;
   }
 
   // Bigger tap targets once a mouse-hover-tuned pill nav becomes
   // finger-tuned: ~44px is the usual minimum comfortable touch target.
   .site-header__nav-link {
-    padding: 0.6rem 1.1rem;
+    padding: 0.55rem 1rem;
   }
 
   .nav-dropdown__link {
-    padding: 0.65rem 0.9rem;
-  }
-
-  .search-box {
-    width: 100%;
+    padding: 0.6rem 0.85rem;
   }
 
   .search-box__input {
@@ -759,6 +823,21 @@ main {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
+}
+
+// The one recurring spot for the halftone motif (see body's own edge
+// pattern) — small and faint enough to read as texture, not decoration,
+// even repeated across a whole grid of cards.
+.card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 50px;
+  height: 50px;
+  background: url('/decor/dot-fade-right.svg') no-repeat bottom right / contain;
+  opacity: 0.15;
+  pointer-events: none;
 }
 
 @keyframes card-glow-pulse {
@@ -1202,8 +1281,14 @@ main {
   }
 }
 
+// A slanted top edge instead of a flat stacked rectangle, cutting into a
+// subtly tinted panel — a bit more dynamic than a plain divider, without
+// going as far as a full-bleed banner outside the page's content column.
 .home-section {
   margin-top: 3rem;
+  padding: 3.5rem 2rem 2.5rem;
+  background: $color-bg-header;
+  clip-path: polygon(0 32px, 100% 0, 100% 100%, 0 100%);
 }
 
 .home-section__see-all {
@@ -1286,8 +1371,15 @@ main {
 
 // ---- Footer --------------------------------------------------------------
 
+// Bookends the page with the same diagonal-cut language as the homepage's
+// "What's new" band — .site-footer isn't inside <main>'s max-width, so
+// this reaches the full viewport edge to edge for free, no breakout trick
+// needed.
 .site-footer {
-  padding: 1.5rem 1.5rem 3rem;
+  margin-top: 3rem;
+  padding: 3rem 1.5rem 2.5rem;
+  background: $color-bg-header;
+  clip-path: polygon(0 24px, 100% 0, 100% 100%, 0 100%);
 }
 
 .site-footer__inner {

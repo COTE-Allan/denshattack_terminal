@@ -1,5 +1,5 @@
 ---
-import { ChevronDown } from '@lucide/astro';
+import { ChevronDown, Menu, X } from '@lucide/astro';
 import logo from '../assets/logo_denshattack_terminal.png';
 import SearchBox from './SearchBox.astro';
 
@@ -22,17 +22,44 @@ const isSpeedrunActive = speedrunLinks.some((l) => isCurrent(l.href));
 
 <header class="site-header">
   <div class="site-header__inner">
-    <a class="site-header__logo" href="/">
-      <img
-        class="site-header__logo-img"
-        src={logo.src}
-        width={logo.width}
-        height={logo.height}
-        alt="Denshattack Terminal"
-      />
-    </a>
+    {/*
+      .site-header__brand-row exists so the logo and the mobile toggle sit
+      on a real flex row together — an absolutely-positioned toggle used to
+      float on top of the logo's own clickable area regardless of the
+      logo's actual width. On desktop this row is just the logo; the
+      toggle inside it stays display:none there (see global.scss).
+    */}
+    <div class="site-header__brand-row">
+      <a class="site-header__logo" href="/">
+        <img
+          class="site-header__logo-img"
+          src={logo.src}
+          width={logo.width}
+          height={logo.height}
+          alt="Denshattack Terminal"
+        />
+      </a>
 
-    <nav class="site-header__nav" aria-label="Main navigation">
+      {/*
+        Hidden above 720px (see the mobile media query in global.scss);
+        below it, toggles .site-header--nav-open on the <header> to
+        show/hide .site-header__nav, which stays the exact same markup
+        either way — only its visibility changes with viewport width.
+      */}
+      <button
+        type="button"
+        class="mobile-nav-toggle"
+        aria-label="Menu"
+        aria-expanded="false"
+        aria-controls="mobile-nav-panel"
+        data-mobile-nav-toggle
+      >
+        <Menu size={18} class="mobile-nav-toggle__icon mobile-nav-toggle__icon--menu" aria-hidden="true" />
+        <X size={18} class="mobile-nav-toggle__icon mobile-nav-toggle__icon--close" aria-hidden="true" />
+      </button>
+    </div>
+
+    <nav class="site-header__nav" id="mobile-nav-panel" aria-label="Main navigation">
       <ul class="site-header__nav-list">
         <li class="site-header__nav-item">
           {/*
@@ -95,6 +122,21 @@ const isSpeedrunActive = speedrunLinks.some((l) => isCurrent(l.href));
   document.addEventListener('click', (e) => {
     document.querySelectorAll('.nav-dropdown[open]').forEach((dropdown) => {
       if (!dropdown.contains(e.target)) dropdown.removeAttribute('open');
+    });
+
+    const toggle = e.target.closest?.('[data-mobile-nav-toggle]');
+    if (toggle) {
+      const header = toggle.closest('.site-header');
+      const isOpen = header.classList.toggle('site-header--nav-open');
+      toggle.setAttribute('aria-expanded', String(isOpen));
+      return;
+    }
+
+    // Close the panel on an outside click, same as the dropdown above.
+    document.querySelectorAll('.site-header--nav-open').forEach((header) => {
+      if (e.target.closest('.site-header__nav')) return;
+      header.classList.remove('site-header--nav-open');
+      header.querySelector('[data-mobile-nav-toggle]')?.setAttribute('aria-expanded', 'false');
     });
   });
 </script>
