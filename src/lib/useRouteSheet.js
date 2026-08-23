@@ -11,6 +11,6 @@ const STORAGE_KEY = 'denshattack:route-sheet';
  * whichever ones a visitor picked for themselves.
  */
 export function useRouteSheet() {
-  const { items: selected, loaded, toggle, reset } = useSkipSet(STORAGE_KEY);
-  return { selected, loaded, toggle, reset };
+  const { items: selected, loaded, toggle, reset, addMany } = useSkipSet(STORAGE_KEY);
+  return { selected, loaded, toggle, reset, addMany };
 }

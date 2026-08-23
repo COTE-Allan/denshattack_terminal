@@ -1,6 +1,7 @@
-import { ChevronRight, Clock, Printer, Star, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { ChevronRight, Clock, Download, Star, Trash2, Upload } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
 import { difficultyStarCount, formatSeconds, timeSaveWatchCount } from '../lib/format.js';
+import { exportRoute, resolveImportedRoute } from '../lib/routeExport.js';
 import { SKIP_SORT_OPTIONS, SKIP_SORTS, filterSkips, groupSkipsByLevel } from '../lib/skipSort.js';
 import { useRouteSheet } from '../lib/useRouteSheet.js';
 import { IconRow, SortSelect } from './CatalogUI.jsx';
@@ -9,16 +10,18 @@ import { IconRow, SortSelect } from './CatalogUI.jsx';
  * Build-your-own route: click skips (as pills, grouped by level and
  * collapsed by default so a big catalogue stays scannable, with
  * search/sort to jump straight to one) to add them to "My route" on the
- * right, then print that list. Not every skip belongs in the same run:
+ * right, then export it as JSON. Not every skip belongs in the same run:
  * some are mutually exclusive alternatives for the same spot, so this
  * doesn't pre-fill anything; it's entirely the visitor's own picks, kept
  * in localStorage (see useRouteSheet.js) so they can come back and refine
- * it before printing.
+ * it before exporting.
  */
 export default function RouteSheet({ skips }) {
-  const { selected, loaded, toggle, reset } = useRouteSheet();
+  const { selected, loaded, toggle, reset, addMany } = useRouteSheet();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('level');
+  const [importMessage, setImportMessage] = useState('');
+  const fileInputRef = useRef(null);
 
   const filtered = useMemo(() => filterSkips(skips, search), [skips, search]);
   const grouped = sort === 'level' ? groupSkipsByLevel(filtered) : null;
@@ -38,6 +41,49 @@ export default function RouteSheet({ skips }) {
   );
 
   if (!loaded) return null;
+
+  function handleExport() {
+    const blob = new Blob([JSON.stringify(exportRoute(myRoute), null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'denshattack-route.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImportClick() {
+    fileInputRef.current?.click();
+  }
+
+  function handleImportFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // lets the same file be re-picked later if needed
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data;
+      try {
+        data = JSON.parse(String(reader.result));
+      } catch {
+        setImportMessage("Couldn't read that file: it's not valid JSON.");
+        return;
+      }
+
+      const { ids, skipped } = resolveImportedRoute(data, skips);
+      addMany(ids);
+
+      setImportMessage(
+        skipped.length === 0
+          ? `Imported ${ids.length} skip${ids.length === 1 ? '' : 's'}.`
+          : `Imported ${ids.length} skip${ids.length === 1 ? '' : 's'}. ${skipped.length} no longer matched a catalogued skip: ${skipped.join(', ')}.`
+      );
+    };
+    reader.readAsText(file);
+  }
 
   return (
     <div className="route-sheet">
@@ -96,17 +142,31 @@ export default function RouteSheet({ skips }) {
             <h2>
               My route ({myRoute.length} skip{myRoute.length === 1 ? '' : 's'})
             </h2>
-            {myRoute.length > 0 && (
-              <div className="route-sheet__summary-actions">
-                <button type="button" className="btn" onClick={() => window.print()}>
-                  <Printer size={16} aria-hidden="true" /> Print
-                </button>
-                <button type="button" className="btn" onClick={reset}>
-                  <Trash2 size={16} aria-hidden="true" /> Clear
-                </button>
-              </div>
-            )}
+            <div className="route-sheet__summary-actions">
+              {myRoute.length > 0 && (
+                <>
+                  <button type="button" className="btn" onClick={reset}>
+                    <Trash2 size={16} aria-hidden="true" /> Clear
+                  </button>
+                  <button type="button" className="btn" onClick={handleExport}>
+                    <Download size={16} aria-hidden="true" /> Export
+                  </button>
+                </>
+              )}
+              <button type="button" className="btn" onClick={handleImportClick}>
+                <Upload size={16} aria-hidden="true" /> Import
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json"
+                hidden
+                onChange={handleImportFile}
+              />
+            </div>
           </div>
+
+          {importMessage && <p className="route-sheet__import-message">{importMessage}</p>}
 
           {myRoute.length > 0 && (
             <p className="route-sheet__total-timesave">

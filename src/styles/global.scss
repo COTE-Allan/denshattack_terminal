@@ -1621,7 +1621,6 @@ main {
 // level's full pill list at once would be a wall of buttons.
 .route-sheet__picker-level {
   margin-bottom: 0.5rem;
-  break-inside: avoid;
 
   summary {
     display: flex;
@@ -1656,7 +1655,14 @@ main {
 
 .route-sheet__summary-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.route-sheet__import-message {
+  margin: 0.5rem 0 0;
+  color: $color-text-muted;
+  font-size: 0.8rem;
 }
 
 .route-sheet__total-timesave {
@@ -1678,7 +1684,6 @@ main {
 .route-sheet__skip {
   padding: 1rem 0;
   border-bottom: 1px solid $color-border-subtle;
-  break-inside: avoid;
 
   h3 {
     margin: 0 0 0.35rem;
@@ -1713,48 +1718,3 @@ main {
   color: $color-border;
 }
 
-// ---- Print (route sheet) ---------------------------------------------
-
-@media print {
-  // Site chrome and the "pick your skips" pane make no sense on paper:
-  // only the compiled "My route" list should print.
-  .site-header,
-  .site-footer,
-  .page-sticker,
-  .back-to-top,
-  #page-loading-bar,
-  .route-sheet__note,
-  .route-sheet__picker,
-  .route-sheet__summary-actions {
-    display: none !important;
-  }
-
-  // The dark theme would otherwise print a full-bleed dark background and
-  // yellow text, wasting ink and hurting legibility on paper.
-  * {
-    color: #000 !important;
-    background: #fff !important;
-    box-shadow: none !important;
-  }
-
-  main {
-    max-width: none;
-    padding: 0;
-  }
-
-  // Back to a plain single block now that the picker pane beside it is
-  // hidden — no more two-column grid or sticky positioning to print.
-  .route-sheet__layout {
-    display: block;
-  }
-
-  .route-sheet__summary {
-    position: static;
-    padding: 0;
-    border: 0;
-  }
-
-  .route-sheet__skip {
-    break-inside: avoid;
-  }
-}

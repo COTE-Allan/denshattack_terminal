@@ -56,5 +56,19 @@ export function useSkipSet(key) {
     writeStored(key, new Set());
   }, [key]);
 
-  return { items, loaded, toggle, reset };
+  // Union, not replace — used by route import so loading a file adds to
+  // whatever's already picked instead of silently discarding it.
+  const addMany = useCallback(
+    (ids) => {
+      setItems((prev) => {
+        const next = new Set(prev);
+        for (const id of ids) next.add(id);
+        writeStored(key, next);
+        return next;
+      });
+    },
+    [key]
+  );
+
+  return { items, loaded, toggle, reset, addMany };
 }
