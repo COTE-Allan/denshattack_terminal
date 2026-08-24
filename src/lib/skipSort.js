@@ -1,8 +1,4 @@
-/**
- * Shared search/sort/group helpers for PracticeMode.jsx and
- * RouteSheet.jsx — both list every skip and, once there are a lot of
- * them, both need the same "find one fast" tools.
- */
+// shared search/sort/group helpers for practicemode.jsx and routesheet.jsx
 
 export const SKIP_SORT_OPTIONS = [
   { value: 'level', label: 'Level' },
@@ -11,8 +7,7 @@ export const SKIP_SORT_OPTIONS = [
   { value: 'timesave', label: 'Time save (biggest first)' },
 ];
 
-// 'level' isn't here: sorting by level means grouping by level instead of
-// a flat sort — see groupSkipsByLevel below, used when sort === 'level'.
+// 'level' isn't here: sorting by level means grouping instead, see groupSkipsByLevel below
 export const SKIP_SORTS = {
   name: (a, b) => a.title.localeCompare(b.title, 'fr', { numeric: true }),
   difficulty: (a, b) => Number(b.difficulty || 0) - Number(a.difficulty || 0),
@@ -25,7 +20,7 @@ export function filterSkips(skips, search) {
   return skips.filter((s) => `${s.title} ${s.summary}`.toLowerCase().includes(q));
 }
 
-/** Groups already-sorted-by-level skips into { level, skips[] } sections, preserving order. */
+// groups already-sorted-by-level skips into { level, skips[] } sections, preserving order
 export function groupSkipsByLevel(skips) {
   const groups = [];
   const byLevel = new Map();

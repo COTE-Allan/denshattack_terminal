@@ -1,9 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import RouteSheet from '../components/RouteSheet.jsx';
-import { getSkips } from '../lib/wp.js';
-
-const skips = await getSkips();
 ---
 
 <Base
@@ -15,6 +12,6 @@ const skips = await getSkips();
       <h1>Route sheet</h1>
     </div>
 
-    <RouteSheet client:load skips={skips} />
+    <RouteSheet client:load />
   </main>
 </Base>

@@ -1,14 +1,7 @@
 ---
 ---
 
-{/*
-  Renders no visible markup of its own — the bar element is created and
-  torn down entirely from the script below, so it survives however Astro's
-  <ClientRouter> swaps the body between navigations. Gives two things a
-  slow page transition currently lacks: visible feedback that navigation
-  is in flight (instead of the old page just sitting there), and a soft
-  guard against a second stray click firing another navigation mid-flight.
-*/}
+{/* the bar element is created/torn down from the script below, so it survives astro's body swaps */}
 <script>
   const BAR_ID = 'page-loading-bar';
 
@@ -31,9 +24,7 @@
     bar.classList.add('page-loading-bar--active');
   });
 
-  // Fires once the new page has swapped in and its own scripts have run —
-  // including on the very first load, when the bar was never created, so
-  // this just no-ops harmlessly.
+  // fires once the new page has swapped in; no-ops harmlessly on first load, when the bar was never created
   document.addEventListener('astro:page-load', () => {
     document.documentElement.classList.remove('is-navigating');
 

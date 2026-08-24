@@ -7,9 +7,7 @@ import { ArrowUp } from '@lucide/astro';
 </button>
 
 <script>
-  // `getElementById` runs fresh on every scroll/click instead of caching a
-  // reference, so this keeps working after a view transition swaps in a new
-  // button element on the next page — same reasoning as CopyLinkButton.astro.
+  // re-queried on every scroll/click, not cached, so it survives a view transition swapping the button (see copylinkbutton.astro)
   window.addEventListener(
     'scroll',
     () => {

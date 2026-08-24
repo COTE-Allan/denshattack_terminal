@@ -1,18 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
-import { Card } from '../components/CatalogUI.jsx';
-import { getAllContent } from '../lib/wp.js';
-import { isRecent, TYPE_LABELS } from '../lib/format.js';
+import RecentItems from '../components/RecentItems.jsx';
 
-// A wider window than the catalogue cards' own "New!" badge (7 days): this
-// page is the dedicated place to look back over recent additions, so it
-// can afford to look further back.
-const RECENT_DAYS = 30;
-
-const all = await getAllContent();
-const recent = all
-  .filter((i) => isRecent(i.modified, RECENT_DAYS))
-  .sort((a, b) => new Date(b.modified) - new Date(a.modified));
+const RECENT_DAYS = 30; // wider window than the catalogue cards' own "new!" badge (7 days)
 ---
 
 <Base
@@ -24,23 +14,9 @@ const recent = all
       <h1>What's new</h1>
     </div>
 
-    {recent.length === 0 ? (
-      <p class="catalog__empty">
-        Nothing added or updated in the last {RECENT_DAYS} days. Check back
-        soon.
-      </p>
-    ) : (
-      <ul class="catalog__list">
-        {recent.map((i) => (
-          <Card
-            href={i.href}
-            media={i.mediaSrc ? { src: i.mediaSrc } : null}
-            title={i.title}
-            summary={i.summary}
-            meta={[{ label: 'Type', value: TYPE_LABELS[i.type] }]}
-          />
-        ))}
-      </ul>
-    )}
+    <RecentItems
+      client:load
+      emptyText={`Nothing added or updated in the last ${RECENT_DAYS} days. Check back soon.`}
+    />
   </main>
 </Base>

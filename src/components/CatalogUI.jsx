@@ -1,35 +1,15 @@
 import { Check, Gamepad2 } from 'lucide-react';
 import { Fragment } from 'react';
 
-/**
- * Shared building blocks for every catalogue (skips, stickers, ...): the
- * card grid item and the filter dropdown. Kept generic on purpose so new
- * catalogues can reuse them instead of re-implementing card markup.
- */
+// shared building blocks for every catalogue: the card grid item and the filter dropdown
 
-/**
- * One grid card: cover media (or a placeholder, so every card keeps the
- * same media-slot height even without a thumbnail), title, optional
- * summary, and a list of meta facts rendered as a definition list.
- *
- * `meta` entries: { label, value, className?, attrs? }. `attrs` is spread
- * onto the <dd>, used for styling hooks like data-level, or a title
- * attribute for a tooltip. Falsy entries in `meta` are skipped, so callers
- * can write `s.level && { label: 'Level', value: s.level }` inline.
- *
- * `badge`, when set, renders a small pill over the top-left of the media
- * slot (e.g. "New").
- *
- * `learned`/`onToggleLearned`, when both set, render a checkmark toggle in
- * the top-right corner (see /practice). It's a sibling of the card's link,
- * not nested inside it — an interactive control inside an <a> is invalid
- * HTML and would fire the card's own navigation on click.
- */
+// one grid card: media (or placeholder), title, summary, meta facts; `meta` entries are { label, value, className?, attrs? }, falsy ones skipped
 export function Card({ href, media, title, summary, meta = [], badge, learned, onToggleLearned }) {
   const entries = meta.filter(Boolean);
 
   return (
     <li className="card">
+      {/* sibling of the link, not nested — a control inside <a> is invalid html */}
       {onToggleLearned && (
         <button
           type="button"
@@ -53,6 +33,7 @@ export function Card({ href, media, title, summary, meta = [], badge, learned, o
               src={media.src}
               alt={media.alt || ''}
               loading="lazy"
+              decoding="async"
             />
           ) : (
             <div className="card__media-placeholder" aria-hidden="true">
@@ -87,15 +68,7 @@ export function Card({ href, media, title, summary, meta = [], badge, learned, o
   );
 }
 
-/**
- * `count` copies of `Icon` in a row, for a difficulty/time-save rating
- * (e.g. `<IconRow icon={Star} count={3} filled />`). Shared between every
- * React component that renders one (Catalog.jsx, PracticeMode.jsx,
- * RouteSheet.jsx) so they don't each reimplement the same loop. The
- * `.astro` pages with the same rating (skips/[slug].astro) use
- * @lucide/astro directly instead, since they can't import React
- * components.
- */
+// `count` copies of `icon` in a row, for a difficulty/time-save rating; shared across the react catalogue components
 export function IconRow({ icon: Icon, count, filled = false }) {
   return (
     <Fragment>
@@ -106,7 +79,7 @@ export function IconRow({ icon: Icon, count, filled = false }) {
   );
 }
 
-/** A labelled <select> filter, with an "all" option and optional per-option formatting. */
+// a labelled <select> filter, with an "all" option and optional per-option formatting
 export function Select({ label, value, onChange, options, allLabel, formatOption = (o) => o }) {
   if (!options.length) return null;
 
@@ -129,11 +102,7 @@ export function Select({ label, value, onChange, options, allLabel, formatOption
   );
 }
 
-/**
- * Sort order picker: unlike <Select>, always has a value (no "all" option)
- * and takes `{ value, label }` options directly since a sort key's label
- * ("Most recent") rarely matches the key itself ("recent").
- */
+// sort order picker: unlike <select>, always has a value and takes `{ value, label }` options directly
 export function SortSelect({ label = 'Sort by', value, onChange, options }) {
   return (
     <label className="filter">

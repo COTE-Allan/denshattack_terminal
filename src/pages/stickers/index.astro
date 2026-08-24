@@ -1,44 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
 import StickerCatalog from '../../components/StickerCatalog.jsx';
-import { getStickers, facet } from '../../lib/wp.js';
-import { isRecent } from '../../lib/format.js';
-
-// Runs at build time. If WordPress is unreachable the build fails loudly
-// rather than shipping an empty catalogue.
-const stickers = await getStickers();
-
-// A curated handful of tags, not every tag ever used — recent additions'
-// tags first (they're what's fresh right now), topped up with the
-// all-time most-used ones, capped so the pill row stays a quick scan
-// rather than a wall of text.
-const RECENT_DAYS = 30;
-const MAX_FEATURED_TAGS = 12;
-
-const tagCounts = new Map();
-for (const s of stickers) {
-  for (const tag of s.tags) {
-    tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
-  }
-}
-const mostUsedTags = [...tagCounts.entries()]
-  .sort((a, b) => b[1] - a[1])
-  .map(([tag]) => tag);
-
-const recentTags = [
-  ...new Set(
-    stickers.filter((s) => isRecent(s.modified, RECENT_DAYS)).flatMap((s) => s.tags)
-  ),
-];
-
-const featuredTags = [...new Set([...recentTags, ...mostUsedTags])]
-  .slice(0, MAX_FEATURED_TAGS)
-  .sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
-
-const facets = {
-  artists: facet(stickers, 'artist'),
-  tags: featuredTags,
-};
 ---
 
 <Base title="Stickers" description="Sticker catalogue.">
@@ -48,11 +10,8 @@ const facets = {
       <a class="btn" href="/stickers/submit/">Add a sticker</a>
     </div>
 
-    {/*
-      client:load hydrates on page load so filters work immediately.
-      Swap for client:visible if the list sits far down the page.
-    */}
-    <StickerCatalog client:load stickers={stickers} facets={facets} />
+    {/* client:load hydrates on page load: fetches and filters entirely in the browser */}
+    <StickerCatalog client:load />
 
     <div class="page-footer-cta">
       <a class="btn" href="/stickers/submit/">Add a sticker</a>

@@ -1,0 +1,13 @@
+---
+import Base from '../../layouts/Base.astro';
+import BackLink from '../../components/BackLink.astro';
+import TechniqueDetail from '../../components/TechniqueDetail.jsx';
+---
+
+{/* one shell for every technique: apache rewrites /techniques/<slug>/ here, the slug is read client-side */}
+<Base title="Technique details" description="Speedrun technique details.">
+  <main class="technique-page">
+    <BackLink href="/techniques/" label="Back to techniques" />
+    <TechniqueDetail client:load />
+  </main>
+</Base>

@@ -1,38 +1,6 @@
 ---
-import { Award, Clock, Layers, Palette, Sticker, Zap } from '@lucide/astro';
 import Base from '../layouts/Base.astro';
-import { getSkips, getStickers, getTechniques } from '../lib/wp.js';
-import { formatSeconds } from '../lib/format.js';
-
-const [skips, techniques, stickers] = await Promise.all([
-  getSkips(),
-  getTechniques(),
-  getStickers(),
-]);
-
-const baseTechniques = techniques.filter((t) => !t.variantOfId);
-const variantCount = techniques.length - baseTechniques.length;
-
-const totalTimeSaved = skips.reduce((sum, s) => sum + (s.timesave || 0), 0);
-
-/** Most frequent value of `key` across `items`, with its count. Null if none have it. */
-function topContributor(items, key) {
-  const counts = new Map();
-  for (const item of items) {
-    const name = item[key];
-    if (!name) continue;
-    counts.set(name, (counts.get(name) || 0) + 1);
-  }
-
-  let top = null;
-  for (const [name, count] of counts) {
-    if (!top || count > top.count) top = { name, count };
-  }
-  return top;
-}
-
-const topFinder = topContributor(skips, 'foundBy');
-const topArtist = topContributor(stickers, 'artist');
+import Stats from '../components/Stats.jsx';
 ---
 
 <Base title="Stats" description="A look at the whole catalogue: totals and top contributors.">
@@ -41,52 +9,6 @@ const topArtist = topContributor(stickers, 'artist');
       <h1>Stats</h1>
     </div>
 
-    <ul class="stat-grid">
-      <li class="stat-tile">
-        <p class="stat-tile__label"><Zap size={14} aria-hidden="true" /> Skips catalogued</p>
-        <p class="stat-tile__value">{skips.length}</p>
-      </li>
-
-      <li class="stat-tile">
-        <p class="stat-tile__label"><Layers size={14} aria-hidden="true" /> Techniques catalogued</p>
-        <p class="stat-tile__value">{baseTechniques.length}</p>
-        {variantCount > 0 && (
-          <p class="stat-tile__caption">
-            + {variantCount} variant{variantCount > 1 ? 's' : ''}
-          </p>
-        )}
-      </li>
-
-      <li class="stat-tile">
-        <p class="stat-tile__label"><Sticker size={14} aria-hidden="true" /> Stickers submitted</p>
-        <p class="stat-tile__value">{stickers.length}</p>
-      </li>
-
-      <li class="stat-tile">
-        <p class="stat-tile__label"><Clock size={14} aria-hidden="true" /> Total time saved</p>
-        <p class="stat-tile__value">{totalTimeSaved > 0 ? formatSeconds(totalTimeSaved) : 'N/A'}</p>
-        <p class="stat-tile__caption">Across every catalogued skip</p>
-      </li>
-
-      <li class="stat-tile">
-        <p class="stat-tile__label"><Award size={14} aria-hidden="true" /> Top skip finder</p>
-        <p class="stat-tile__value">{topFinder?.name ?? 'N/A'}</p>
-        {topFinder && (
-          <p class="stat-tile__caption">
-            {topFinder.count} skip{topFinder.count > 1 ? 's' : ''} found
-          </p>
-        )}
-      </li>
-
-      <li class="stat-tile">
-        <p class="stat-tile__label"><Palette size={14} aria-hidden="true" /> Top sticker artist</p>
-        <p class="stat-tile__value">{topArtist?.name ?? 'N/A'}</p>
-        {topArtist && (
-          <p class="stat-tile__caption">
-            {topArtist.count} sticker{topArtist.count > 1 ? 's' : ''} made
-          </p>
-        )}
-      </li>
-    </ul>
+    <Stats client:load />
   </main>
 </Base>

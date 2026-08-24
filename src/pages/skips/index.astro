@@ -1,16 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Catalog from '../../components/Catalog.jsx';
-import { getSkips, facet } from '../../lib/wp.js';
-
-// Runs at build time. If WordPress is unreachable the build fails loudly
-// rather than shipping an empty catalogue.
-const skips = await getSkips();
-
-const facets = {
-  levels: facet(skips, 'level'),
-  difficulties: facet(skips, 'difficulty'),
-};
 ---
 
 <Base title="Skips" description="Speedrun skips.">
@@ -20,11 +10,8 @@ const facets = {
       <a class="btn" href="/skips/submit/">Add a skip</a>
     </div>
 
-    {/*
-      client:load hydrates on page load so filters work immediately.
-      Swap for client:visible if the list sits far down the page.
-    */}
-    <Catalog client:load skips={skips} facets={facets} />
+    {/* client:load hydrates on page load: fetches and filters entirely in the browser */}
+    <Catalog client:load />
 
     <div class="page-footer-cta">
       <a class="btn" href="/skips/submit/">Add a skip</a>

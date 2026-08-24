@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import { isRecent } from '../lib/format.js';
+import { useStickers } from '../lib/useContent.js';
+import { facet, featuredStickerTags } from '../lib/wp.js';
+import CatalogStatus from './CatalogStatus.jsx';
 import { Card, Select, SortSelect } from './CatalogUI.jsx';
+import SkeletonGrid from './SkeletonCard.jsx';
 
 const SORTS = {
   name: (a, b) => a.title.localeCompare(b.title, 'fr', { numeric: true }),
@@ -14,16 +18,23 @@ const SORT_OPTIONS = [
   { value: 'artist', label: 'Artist (A–Z)' },
 ];
 
-/**
- * Same client-side search/filter pattern as Catalog.jsx (skips), over the
- * sticker catalogue instead. See Catalog.jsx for the shared reasoning.
- */
-export default function StickerCatalog({ stickers, facets }) {
+// same client-side search/filter pattern as catalog.jsx, over the sticker catalogue
+export default function StickerCatalog() {
+  const { data: stickers, loading, error } = useStickers();
   const [search, setSearch] = useState('');
   const [artist, setArtist] = useState('');
   const [sort, setSort] = useState('name');
 
+  const facets = useMemo(
+    () => ({
+      artists: stickers ? facet(stickers, 'artist') : [],
+      tags: stickers ? featuredStickerTags(stickers) : [],
+    }),
+    [stickers]
+  );
+
   const filtered = useMemo(() => {
+    if (!stickers) return [];
     const q = search.trim().toLowerCase();
 
     return stickers.filter((s) => {
@@ -42,11 +53,25 @@ export default function StickerCatalog({ stickers, facets }) {
     setArtist('');
   }
 
-  // Clicking a tag pill just runs it through the same search box the
-  // "Name or tag" input already filters on, so it doesn't need its own
-  // separate matching logic.
+  // reuses the same search box's matching logic, no separate tag filter needed
   function searchTag(tag) {
     setSearch((current) => (current.trim().toLowerCase() === tag.toLowerCase() ? '' : tag));
+  }
+
+  if (loading) {
+    return (
+      <div className="catalog catalog--stickers">
+        <SkeletonGrid />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="catalog catalog--stickers">
+        <CatalogStatus error={error} />
+      </div>
+    );
   }
 
   return (

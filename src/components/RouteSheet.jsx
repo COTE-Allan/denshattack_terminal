@@ -4,43 +4,34 @@ import { difficultyStarCount, formatSeconds, timeSaveWatchCount } from '../lib/f
 import { exportRoute, resolveImportedRoute } from '../lib/routeExport.js';
 import { SKIP_SORT_OPTIONS, SKIP_SORTS, filterSkips, groupSkipsByLevel } from '../lib/skipSort.js';
 import { useRouteSheet } from '../lib/useRouteSheet.js';
+import { useSkips } from '../lib/useContent.js';
+import CatalogStatus from './CatalogStatus.jsx';
 import { IconRow, SortSelect } from './CatalogUI.jsx';
 
-/**
- * Build-your-own route: click skips (as pills, grouped by level and
- * collapsed by default so a big catalogue stays scannable, with
- * search/sort to jump straight to one) to add them to "My route" on the
- * right, then export it as JSON. Not every skip belongs in the same run:
- * some are mutually exclusive alternatives for the same spot, so this
- * doesn't pre-fill anything; it's entirely the visitor's own picks, kept
- * in localStorage (see useRouteSheet.js) so they can come back and refine
- * it before exporting.
- */
-export default function RouteSheet({ skips }) {
+// build-your-own route: click skips to add them to "my route", then export it as json — kept in localStorage
+export default function RouteSheet() {
+  const { data: skips, loading, error } = useSkips();
   const { selected, loaded, toggle, reset, addMany } = useRouteSheet();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('level');
   const [importMessage, setImportMessage] = useState('');
   const fileInputRef = useRef(null);
 
-  const filtered = useMemo(() => filterSkips(skips, search), [skips, search]);
+  const filtered = useMemo(() => (skips ? filterSkips(skips, search) : []), [skips, search]);
   const grouped = sort === 'level' ? groupSkipsByLevel(filtered) : null;
   const flat = sort === 'level' ? null : [...filtered].sort(SKIP_SORTS[sort]);
-  // Groups auto-expand while searching, so a match isn't hidden behind a
-  // collapsed level; left alone (browser-native, uncontrolled) otherwise,
-  // so a level the visitor opened by hand stays open.
-  const forceOpen = search.trim() !== '' ? true : undefined;
+  const forceOpen = search.trim() !== '' ? true : undefined; // groups auto-expand while searching, so matches aren't hidden
 
-  // Always in level order, regardless of the picker's own search/sort: a
-  // route sheet should read like the run plays out, not however it was
-  // last searched to build it.
-  const myRoute = useMemo(() => skips.filter((s) => selected.has(s.id)), [skips, selected]);
+  const myRoute = useMemo(
+    () => (skips ? skips.filter((s) => selected.has(s.id)) : []),
+    [skips, selected]
+  ); // always in level order, not the picker's search/sort
   const totalTimeSaved = useMemo(
     () => myRoute.reduce((sum, s) => sum + (s.timesave || 0), 0),
     [myRoute]
   );
 
-  if (!loaded) return null;
+  if (!loaded || loading || error) return <CatalogStatus loading={loading || !loaded} error={error} />;
 
   function handleExport() {
     const blob = new Blob([JSON.stringify(exportRoute(myRoute), null, 2)], {

@@ -5,9 +5,7 @@ function readStored(key) {
     const raw = window.localStorage.getItem(key);
     return new Set(raw ? JSON.parse(raw) : []);
   } catch {
-    // Storage can be unavailable (private browsing, quota, disabled) — the
-    // set just won't persist across reloads in that case.
-    return new Set();
+    return new Set(); // storage can be unavailable (private browsing, quota, disabled)
   }
 }
 
@@ -15,22 +13,14 @@ function writeStored(key, set) {
   try {
     window.localStorage.setItem(key, JSON.stringify([...set]));
   } catch {
-    // Same as above: fine to silently no-op.
+    // same as above: fine to silently no-op
   }
 }
 
-/**
- * A Set of skip ids persisted to localStorage under `key` — the shared
- * mechanics behind both "learned" (useLearned.js) and "my route"
- * (useRouteSheet.js): same read/write/toggle behavior, different key and
- * different meaning to whoever's using it.
- */
+// a set of skip ids persisted to localStorage under `key`, shared by useLearned.js and useRouteSheet.js
 export function useSkipSet(key) {
   const [items, setItems] = useState(() => new Set());
-  // Read from localStorage after mount only, so the server-rendered markup
-  // and the first client render match (no hydration mismatch) — same
-  // pattern as SearchResults.jsx's ?q= handling.
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(false); // read from localStorage after mount only, to avoid a hydration mismatch
 
   useEffect(() => {
     setItems(readStored(key));
@@ -56,8 +46,7 @@ export function useSkipSet(key) {
     writeStored(key, new Set());
   }, [key]);
 
-  // Union, not replace — used by route import so loading a file adds to
-  // whatever's already picked instead of silently discarding it.
+  // union, not replace — route import adds to what's already picked instead of discarding it
   const addMany = useCallback(
     (ids) => {
       setItems((prev) => {

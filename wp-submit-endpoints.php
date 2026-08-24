@@ -2,26 +2,13 @@
 /**
  * Plugin Name: Denshattack Submit Endpoints
  * Description: Public REST endpoints for the "Add a skip / sticker" forms.
- *
- * Everything lands as a `pending` post; nothing goes live until you
- * approve it in wp-admin.
- *
- * Sticker images are real uploads (multipart/form-data), handled with the
- * same core functions WordPress itself uses for the media library
- * (wp_handle_upload, wp_check_filetype_and_ext), the safest way to accept
- * a file from an anonymous public form.
- *
- * NOTE: the post type keys are "skip" / "sticker" / "technique" (singular).
- * That's the real WordPress post_type slug registered by ACF, distinct from
- * the plural "skips"/"stickers"/"techniques" GraphQL type name used in
- * queries.
  */
 
-// --- CORS: the static site lives on a different domain than this WP install ---
+// cors: the static site lives on a different domain than this wp install
 add_action( 'rest_api_init', function () {
 	remove_filter( 'rest_pre_serve_request', 'rest_send_cors_headers' );
 	add_filter( 'rest_pre_serve_request', function ( $value ) {
-		// Replace with your real front-end origin(s) once you know the final domain.
+		// replace with your real front-end origin(s) once you know the final domain
 		header( 'Access-Control-Allow-Origin: *' );
 		header( 'Access-Control-Allow-Methods: POST, OPTIONS' );
 		header( 'Access-Control-Allow-Headers: Content-Type' );
@@ -29,12 +16,9 @@ add_action( 'rest_api_init', function () {
 	} );
 }, 15 );
 
-// --- Very small per-IP rate limit: 5 submissions / hour per endpoint ---
+// per-ip rate limit: 5 submissions/hour per endpoint
 function densha_rate_limit_ok( $key ) {
-	// Dev bypass: fetch() from the local Astro dev server sends this Origin
-	// header, so testing repeatedly from localhost:4321 never gets capped.
-	// REMOVE THIS BLOCK once the site is live on its real domain, since anyone
-	// could spoof this header to skip the limit entirely otherwise.
+	// dev bypass for localhost — remove before going live, a spoofed origin header could skip the limit
 	$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 	if ( strpos( $origin, 'http://localhost:' ) === 0 ) {
 		return true;
@@ -52,14 +36,14 @@ function densha_rate_limit_ok( $key ) {
 	return true;
 }
 
-// --- Reject if the honeypot field is filled (real visitors never see it) ---
+// rejects if the honeypot field is filled (bots only)
 function densha_honeypot_tripped( $data ) {
 	return ! empty( $data['website'] );
 }
 
-// --- Image upload, restricted to a tight image whitelist -----------------
+// image upload, restricted to a tight mime whitelist
 
-define( 'DENSHA_MAX_UPLOAD_BYTES', 5 * 1024 * 1024 ); // 5MB
+define( 'DENSHA_MAX_UPLOAD_BYTES', 5 * 1024 * 1024 ); // 5mb
 
 function densha_allowed_image_mimes() {
 	return array(
@@ -70,15 +54,7 @@ function densha_allowed_image_mimes() {
 	);
 }
 
-/**
- * Turns one $_FILES-style entry into a real media library attachment,
- * returning the attachment ID (or null if nothing was submitted, or a
- * WP_Error if the file was rejected).
- *
- * wp_check_filetype_and_ext() inspects the file's actual content, not just
- * its name/extension, so a renamed script can't sneak through disguised as
- * "photo.jpg", the same check WordPress runs on every native upload.
- */
+// turns a $_files entry into a real attachment; wp_check_filetype_and_ext inspects actual content, not just the name, so a renamed script can't sneak through
 function densha_handle_image_upload( $file, $post_id, $meta = array() ) {
 	if ( empty( $file ) || empty( $file['tmp_name'] ) ) {
 		return null; // optional field, nothing submitted
@@ -102,7 +78,7 @@ function densha_handle_image_upload( $file, $post_id, $meta = array() ) {
 	require_once ABSPATH . 'wp-admin/includes/media.php';
 	require_once ABSPATH . 'wp-admin/includes/image.php';
 
-	// Restrict wp_handle_upload() to the same whitelist for this one call.
+	// restrict wp_handle_upload() to the same whitelist for this one call
 	$restrict_mimes = function () use ( $allowed ) {
 		return $allowed;
 	};
@@ -117,7 +93,7 @@ function densha_handle_image_upload( $file, $post_id, $meta = array() ) {
 	$attachment_id = wp_insert_attachment( array(
 		'post_mime_type' => $moved['type'],
 		'post_title'      => $meta['title'] ?? sanitize_file_name( $file['name'] ),
-		'post_excerpt'    => $meta['caption'] ?? '', // "Caption" field in the media library
+		'post_excerpt'    => $meta['caption'] ?? '', // "caption" field in the media library
 		'post_status'     => 'inherit', // standard status for attachments
 		'post_parent'     => $post_id,
 	), $moved['file'] );
@@ -144,8 +120,7 @@ add_action( 'rest_api_init', function () {
 			$data = $req->get_params();
 
 			if ( densha_honeypot_tripped( $data ) ) {
-				// Pretend it worked so the bot doesn't learn to skip the field.
-				return new WP_REST_Response( array( 'ok' => true ), 200 );
+				return new WP_REST_Response( array( 'ok' => true ), 200 ); // pretend it worked, don't tip off the bot
 			}
 
 			if ( ! densha_rate_limit_ok( 'skip' ) ) {
@@ -159,14 +134,12 @@ add_action( 'rest_api_init', function () {
 
 			$level = sanitize_text_field( $data['level'] ?? '' );
 
-			// Levels are submitted as "1-2-1 Adventure Awaits!" (code + full
-			// name) but the post title only wants the leading code, e.g.
-			// "1-2-1 Skip Name", matching the existing wp-admin convention.
+			// levels submit as "1-2-1 adventure awaits!"; the post title only wants the leading code
 			preg_match( '/^\S+/', $level, $level_code_match );
 			$level_code = $level_code_match[0] ?? '';
 
 			$post_id = wp_insert_post( array(
-				'post_type'   => 'skip', // real post_type key registered by ACF (singular)
+				'post_type'   => 'skip', // real post_type key registered by acf (singular)
 				'post_status' => 'pending', // awaits review, not public until approved
 				'post_title'  => trim( $level_code . ' ' . $name ),
 			), true );
@@ -179,11 +152,7 @@ add_action( 'rest_api_init', function () {
 			update_field( 'level', $level, $post_id );
 			update_field( 'difficulty', sanitize_text_field( $data['difficulty'] ?? '' ), $post_id );
 			update_field( 'timesave', (int) ( $data['timesave'] ?? 0 ), $post_id );
-			// NOTE: ACF's actual field name (the "Field Name" in wp-admin, used as the
-			// meta key) appears to be snake_case here even though WPGraphQL exposes it
-			// as camelCase for reads, the same mismatch as the post_type slug earlier.
-			// If these two still don't save, check Custom Fields > skipData in
-			// wp-admin for the real field name and tell me what it says.
+			// acf's field name is snake_case even though graphql exposes camelcase — check custom fields > skipdata in wp-admin if this doesn't save
 			update_field( 'youtube_link', esc_url_raw( $data['youtubeLink'] ?? '' ), $post_id );
 			update_field( 'found_by', sanitize_text_field( $data['foundBy'] ?? '' ), $post_id );
 			update_field( 'description', sanitize_textarea_field( $data['description'] ?? '' ), $post_id );
@@ -212,7 +181,7 @@ add_action( 'rest_api_init', function () {
 			}
 
 			$post_id = wp_insert_post( array(
-				'post_type'   => 'sticker', // real post_type key registered by ACF (singular)
+				'post_type'   => 'sticker', // real post_type key registered by acf (singular)
 				'post_status' => 'pending',
 				'post_title'  => $name,
 			), true );
@@ -223,9 +192,7 @@ add_action( 'rest_api_init', function () {
 
 			$artist = sanitize_text_field( $data['artist'] ?? '' );
 
-			// The form collects tags comma-separated ("meme, harambe"), but ACF
-			// stores them as one space-separated string with no commas, so split
-			// on either, then rejoin with spaces.
+			// form sends comma-separated tags, acf stores one space-separated string — split on either, rejoin with spaces
 			$tags     = array_filter( array_map( 'trim', preg_split( '/[,\s]+/', $data['tags'] ?? '' ) ) );
 			$tags_str = implode( ' ', $tags );
 
@@ -247,9 +214,7 @@ add_action( 'rest_api_init', function () {
 				return $sticker_id;
 			}
 			if ( $sticker_id ) {
-				// ACF field name is snake_case ("sticker_image") even though the
-				// upload's own form-field key ($files['stickerImage'] above) is
-				// camelCase; those are two different, unrelated names.
+				// acf field name is snake_case ("sticker_image"), unrelated to the upload's own camelcase form-field key
 				update_field( 'sticker_image', $sticker_id, $post_id );
 			}
 
@@ -277,8 +242,7 @@ add_action( 'rest_api_init', function () {
 			$data = $req->get_params();
 
 			if ( densha_honeypot_tripped( $data ) ) {
-				// Pretend it worked so the bot doesn't learn to skip the field.
-				return new WP_REST_Response( array( 'ok' => true ), 200 );
+				return new WP_REST_Response( array( 'ok' => true ), 200 ); // pretend it worked, don't tip off the bot
 			}
 
 			if ( ! densha_rate_limit_ok( 'technique' ) ) {
@@ -291,7 +255,7 @@ add_action( 'rest_api_init', function () {
 			}
 
 			$post_id = wp_insert_post( array(
-				'post_type'   => 'technique', // real post_type key registered by ACF (singular)
+				'post_type'   => 'technique', // real post_type key registered by acf (singular)
 				'post_status' => 'pending', // awaits review, not public until approved
 				'post_title'  => $name,
 			), true );
@@ -301,17 +265,11 @@ add_action( 'rest_api_init', function () {
 			}
 
 			update_field( 'name', $name, $post_id );
-			// NOTE: ACF's actual field name (the "Field Name" in wp-admin, used as the
-			// meta key) may be snake_case here even though WPGraphQL exposes it as
-			// camelCase for reads, same as the skip/sticker fields above. If this
-			// doesn't save, check Custom Fields > techniqueData in wp-admin for the
-			// real field name.
+			// acf's field name may be snake_case even though graphql exposes camelcase — check custom fields > techniquedata in wp-admin if this doesn't save
 			update_field( 'youtube_link', esc_url_raw( $data['youtubeLink'] ?? '' ), $post_id );
 			update_field( 'description', sanitize_textarea_field( $data['description'] ?? '' ), $post_id );
 
-			// "Variant of" is submitted as the parent technique's post ID (the
-			// submission form's dropdown carries the ID as its value, the
-			// technique's name as its visible label).
+			// "variant of" submits the parent technique's post id (dropdown value), name is just the visible label
 			$variant_of_id = (int) ( $data['variantOf'] ?? 0 );
 			if ( $variant_of_id > 0 && get_post_type( $variant_of_id ) === 'technique' ) {
 				update_field( 'variant_of', $variant_of_id, $post_id );

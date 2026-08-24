@@ -10,9 +10,13 @@ import {
   youtubeId,
 } from '../lib/format.js';
 import { useLearnedSkips } from '../lib/useLearned.js';
+import { useSkips } from '../lib/useContent.js';
+import { facet } from '../lib/wp.js';
+import CatalogStatus from './CatalogStatus.jsx';
 import { Card, IconRow, Select, SortSelect } from './CatalogUI.jsx';
+import SkeletonGrid from './SkeletonCard.jsx';
 
-/** Plain-text fallback for the Difficulty <select>: <option> can't hold SVG icons. */
+// plain-text fallback for the difficulty <select>: <option> can't hold svg icons
 function difficultyOptionLabel(difficulty) {
   const n = difficultyStarCount(difficulty);
   return n > 0 ? '★'.repeat(n) : difficulty;
@@ -36,18 +40,9 @@ const SORT_OPTIONS = [
   { value: 'timesave', label: 'Time save (biggest first)' },
 ];
 
-/**
- * Client-side search and filtering over the whole catalogue.
- *
- * The full list is embedded in the page at build time, so filtering is instant
- * and needs no server. Comfortable up to a few thousand entries.
- *
- * Astro server-renders this at build time, so the list is in the HTML for
- * search engines before hydration.
- *
- * Markup is deliberately unstyled. Every element carries a class name.
- */
-export default function Catalog({ skips, facets }) {
+// fetches the whole catalogue client-side, so the deployed site never needs a rebuild for new wordpress entries
+export default function Catalog() {
+  const { data: skips, loading, error } = useSkips();
   const [search, setSearch] = useState('');
   const [level, setLevel] = useState('');
   const [difficulty, setDifficulty] = useState('');
@@ -55,7 +50,16 @@ export default function Catalog({ skips, facets }) {
   const [sort, setSort] = useState('level');
   const { learned, toggle: toggleLearned } = useLearnedSkips();
 
+  const facets = useMemo(
+    () => ({
+      levels: skips ? facet(skips, 'level') : [],
+      difficulties: skips ? facet(skips, 'difficulty') : [],
+    }),
+    [skips]
+  );
+
   const filtered = useMemo(() => {
+    if (!skips) return [];
     const q = search.trim().toLowerCase();
 
     return skips.filter((s) => {
@@ -82,9 +86,25 @@ export default function Catalog({ skips, facets }) {
     setTimesave('');
   }
 
+  if (loading) {
+    return (
+      <div className="catalog catalog--skips">
+        <SkeletonGrid />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="catalog catalog--skips">
+        <CatalogStatus error={error} />
+      </div>
+    );
+  }
+
   return (
     <div className="catalog catalog--skips">
-      {/* No <form>: nothing is submitted, filtering is live. */}
+      {/* no <form>: nothing is submitted, filtering is live */}
       <div className="catalog__filters">
         <label className="filter">
           <span className="filter__label">Search</span>
@@ -180,7 +200,7 @@ export default function Catalog({ skips, facets }) {
   );
 }
 
-/** Builds the meta list for a skip card/detail: shared shape for the <Card>. */
+// builds the meta list for a skip card/detail: shared shape for the <card>
 function skipMeta(s) {
   const difficultyCount = difficultyStarCount(s.difficulty);
   const watchCount = timeSaveWatchCount(s.timesave);
@@ -212,7 +232,7 @@ function skipMeta(s) {
   ];
 }
 
-/** A single catalogue card, using the linked video's YouTube thumbnail as cover. */
+// a single catalogue card, using the linked video's youtube thumbnail as cover
 function SkipCard({ skip: s, learned, onToggleLearned }) {
   const videoId = youtubeId(s.youtubeLink);
 

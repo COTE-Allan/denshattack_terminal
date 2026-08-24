@@ -1,12 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import SearchResults from '../components/SearchResults.jsx';
-import { getAllContent } from '../lib/wp.js';
-
-// Runs at build time. This is a fully static site (no server at request
-// time), so the `?q=` query string can't be read here — SearchResults.jsx
-// reads it client-side from `location.search` after mount instead.
-const items = await getAllContent();
 ---
 
 <Base title="Search" description="Search skips, techniques, and stickers all at once.">
@@ -15,6 +9,6 @@ const items = await getAllContent();
       <h1>Search</h1>
     </div>
 
-    <SearchResults client:load items={items} />
+    <SearchResults client:load />
   </main>
 </Base>

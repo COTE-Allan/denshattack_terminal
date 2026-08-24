@@ -1,39 +1,16 @@
-/**
- * WordPress GraphQL client.
- *
- * Everything here runs at BUILD time only. Nothing in this file ships to the
- * browser, so the CMS URL never appears in the bundle.
- *
- * Field group: skipData
- * Fields:      name, description, level, difficulty, timesave, youtubeLink,
- *              foundBy
- *
- * Field group: stickerData
- * Fields:      name, artist, tags, stickerImage, screenshot
- *
- * Field group: techniqueData
- * Fields:      name, description, youtubeLink, variantOf (post object,
- *              points at another `technique` post — this post is a variant
- *              of that one)
- */
+// wordpress graphql client, runs in the browser — every catalogue/detail page fetches live so the static build never goes stale
 
-import { youtubeId } from './format.js';
+import { isRecent, youtubeId } from './format.js';
 
-const ENDPOINT = import.meta.env.WP_GRAPHQL_URL;
+const ENDPOINT = import.meta.env.PUBLIC_WP_GRAPHQL_URL;
 
 if (!ENDPOINT) {
   throw new Error(
-    'WP_GRAPHQL_URL is not set. Copy .env.example to .env and fill it in.'
+    'PUBLIC_WP_GRAPHQL_URL is not set. Copy .env.example to .env and fill it in.'
   );
 }
 
-/**
- * The WordPress REST API base, derived from the GraphQL endpoint (same
- * host, different path). Used only in `.astro` frontmatter to build a
- * public submission endpoint URL that then gets passed as a plain prop
- * into a client island. This module itself must never be imported from a
- * `.jsx` file (see file header).
- */
+// rest api base, derived from the graphql endpoint (same host, different path)
 export function restBase() {
   return ENDPOINT.replace(/\/graphql\/?$/, '/wp-json');
 }
@@ -51,7 +28,7 @@ async function query(document, variables = {}) {
 
   const json = await res.json();
 
-  // GraphQL answers 200 even on errors, so this check is not optional.
+  // graphql answers 200 even on errors, so this check is not optional
   if (json.errors?.length) {
     throw new Error(
       'GraphQL errors:\n' + json.errors.map((e) => `  - ${e.message}`).join('\n')
@@ -163,7 +140,7 @@ const TECHNIQUES = /* GraphQL */ `
   }
 `;
 
-/** Strip tags, collapse whitespace. Used for meta descriptions and previews. */
+// strip tags, collapse whitespace — used for meta descriptions and previews
 function plain(html) {
   return String(html || '')
     .replace(/<[^>]*>/g, ' ')
@@ -171,10 +148,7 @@ function plain(html) {
     .trim();
 }
 
-/**
- * ACF textarea fields arrive as raw text with newlines; WYSIWYG fields arrive
- * as HTML. Detect which one we got and normalise to renderable HTML either way.
- */
+// acf textarea fields are raw text with newlines, wysiwyg fields are html — normalise either way
 function toHtml(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -191,33 +165,26 @@ function truncate(text, max = 180) {
   return text.slice(0, text.lastIndexOf(' ', max)) + '…';
 }
 
-// Memoized per build: Header.astro (included on every page) needs the full
-// content list for its quick-search index, and without this every single
-// page would re-run the same three GraphQL queries at build time.
+// memoized per page load: several islands on the same page (catalog + search box, etc.) share one fetch
 let skipsPromise = null;
 export function getSkips() {
   return (skipsPromise ??= fetchSkips());
 }
 
-/**
- * Flatten the GraphQL shape into plain objects the React island can filter
- * over without digging through nested fields on every keystroke.
- */
+// flattens the graphql shape into plain objects the react island can filter without digging into nested fields
 async function fetchSkips() {
   const data = await query(SKIPS);
 
   const skips = (data.skips?.nodes ?? []).map((n) => {
     const d = n.skipData ?? {};
 
-    // The ACF name field wins over the WordPress post title.
-    const title = (d.name || n.title || 'Untitled').trim();
+    const title = (d.name || n.title || 'Untitled').trim(); // acf name wins over the wordpress post title
     const description = toHtml(d.description);
     const text = plain(d.description);
 
     return {
       id: n.id,
-      // Fall back to the numeric id if a post has no usable slug.
-      slug: n.slug || String(n.databaseId),
+      slug: n.slug || String(n.databaseId), // fall back to the numeric id if there's no usable slug
       title,
       description,
       summary: truncate(text),
@@ -231,7 +198,7 @@ async function fetchSkips() {
     };
   });
 
-  // Group by level, then alphabetically inside each level.
+  // group by level, then alphabetically inside each level
   return skips.sort(
     (a, b) =>
       a.level.localeCompare(b.level, 'fr', { numeric: true }) ||
@@ -244,19 +211,14 @@ export function getStickers() {
   return (stickersPromise ??= fetchStickers());
 }
 
-/**
- * Flatten the GraphQL shape into plain objects the React island can filter
- * over without digging through nested fields on every keystroke.
- */
+// flattens the graphql shape into plain objects the react island can filter without digging into nested fields
 async function fetchStickers() {
   const data = await query(STICKERS);
 
   const stickers = (data.stickers?.edges ?? []).map(({ node: n }) => {
     const d = n.stickerData ?? {};
 
-    // The "tags" ACF field is one space-separated string (e.g. "meme
-    // harambe flowery"), no commas, but handle a repeater (array) too in
-    // case that field ever gets reconfigured.
+    // "tags" is one space-separated string, but handle an array too in case that field gets reconfigured
     const tags = Array.isArray(d.tags)
       ? d.tags.filter(Boolean).map(String)
       : String(d.tags || '')
@@ -281,16 +243,7 @@ async function fetchStickers() {
   return stickers.sort((a, b) => a.title.localeCompare(b.title, 'fr', { numeric: true }));
 }
 
-/**
- * Flatten the GraphQL shape into plain objects the React island can filter
- * over without digging through nested fields on every keystroke.
- *
- * Variants are just regular technique posts that point back at another one
- * through `variantOf`, so each technique in the returned list also carries
- * a `variants` array: the *other* techniques that point back at it. Built
- * as a second pass since a post's variants aren't knowable from its own
- * GraphQL node, only from every other node's `variantOf`.
- */
+// flattens the graphql shape; each technique also collects the other techniques that point back at it via variantof (second pass, since that's not knowable from its own node)
 let techniquesPromise = null;
 export function getTechniques() {
   return (techniquesPromise ??= fetchTechniques());
@@ -302,21 +255,15 @@ async function fetchTechniques() {
   const techniques = (data.techniques?.edges ?? []).map(({ node: n }) => {
     const d = n.techniqueData ?? {};
 
-    // The ACF name field wins over the WordPress post title.
-    const title = (d.name || n.title || 'Untitled').trim();
+    const title = (d.name || n.title || 'Untitled').trim(); // acf name wins over the wordpress post title
     const description = toHtml(d.description);
     const text = plain(d.description);
-    // Exposed as a connection even though the ACF field only ever holds one
-    // post ("Select multiple values?" is off), so take the first node.
-    const parent = d.variantOf?.nodes?.[0];
+    const parent = d.variantOf?.nodes?.[0]; // exposed as a connection, but the acf field only ever holds one post
 
     return {
       id: n.id,
-      // The plain WordPress post ID, needed to submit this post as a parent
-      // via the "variant of" field on the submission form.
-      databaseId: n.databaseId,
-      // Fall back to the numeric id if a post has no usable slug.
-      slug: n.slug || String(n.databaseId),
+      databaseId: n.databaseId, // plain wordpress post id, needed for the "variant of" field on submission
+      slug: n.slug || String(n.databaseId), // fall back to the numeric id if there's no usable slug
       title,
       description,
       summary: truncate(text),
@@ -333,19 +280,45 @@ async function fetchTechniques() {
   for (const t of techniques) {
     if (!t.variantOfId) continue;
     const parent = byId.get(t.variantOfId);
-    // Each variant carries its own full data (description, video, ...) so
-    // the parent's detail page can render it inline, not just link to it.
-    if (parent) parent.variants.push(t);
+    if (parent) parent.variants.push(t); // full data, so the parent's page can render it inline
   }
 
   return techniques.sort((a, b) => a.title.localeCompare(b.title, 'fr', { numeric: true }));
 }
 
-/** Distinct non-empty values of a scalar field, for the filter dropdowns. */
+// distinct non-empty values of a scalar field, for the filter dropdowns
 export function facet(items, key) {
   return [...new Set(items.map((i) => i[key]).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b, 'fr', { numeric: true })
   );
+}
+
+// a curated handful of sticker tags: recent ones first, topped up with the all-time most-used
+const FEATURED_TAG_RECENT_DAYS = 30;
+const MAX_FEATURED_TAGS = 12;
+
+export function featuredStickerTags(stickers) {
+  const tagCounts = new Map();
+  for (const s of stickers) {
+    for (const tag of s.tags) {
+      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+    }
+  }
+  const mostUsedTags = [...tagCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([tag]) => tag);
+
+  const recentTags = [
+    ...new Set(
+      stickers
+        .filter((s) => isRecent(s.modified, FEATURED_TAG_RECENT_DAYS))
+        .flatMap((s) => s.tags)
+    ),
+  ];
+
+  return [...new Set([...recentTags, ...mostUsedTags])]
+    .slice(0, MAX_FEATURED_TAGS)
+    .sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
 }
 
 function youtubeThumb(url) {
@@ -353,11 +326,7 @@ function youtubeThumb(url) {
   return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : '';
 }
 
-/**
- * Every skip, technique, and sticker flattened into one shape, for the
- * site-wide search and the "what's new" page — the only two places that
- * need to look across all three catalogues at once.
- */
+// every skip/technique/sticker flattened into one shape, for search and "what's new"
 export async function getAllContent() {
   const [skips, techniques, stickers] = await Promise.all([
     getSkips(),
@@ -375,9 +344,7 @@ export async function getAllContent() {
   }));
 
   const techniqueItems = techniques
-    // Variants are shown inline on their parent's page, not as their own
-    // catalogue entry, so they're left out here too.
-    .filter((t) => !t.variantOfId)
+    .filter((t) => !t.variantOfId) // variants show inline on their parent's page, not as their own entry
     .map((t) => ({
       type: 'technique',
       href: `/techniques/${t.slug}/`,

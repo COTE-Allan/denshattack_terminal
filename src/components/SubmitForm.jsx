@@ -1,20 +1,8 @@
 import { useEffect, useState } from 'react';
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB, matches the server-side limit
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5mb, matches the server-side limit
 
-/**
- * Generic public submission form: POSTs to a WordPress REST endpoint that
- * creates a *pending* post for editorial review. Nothing submitted here
- * goes live without an admin approving it in wp-admin.
- *
- * Always submits as multipart/form-data (via FormData) so text fields and
- * file fields travel in the same request without a separate upload step.
- *
- * Anti-spam is intentionally minimal (no sensitive data involved): a hidden
- * honeypot field real visitors never see, checked both here (fast client
- * bail-out) and, this is the part that actually matters since a bot can
- * always skip the JS and POST straight to the endpoint, server-side too.
- */
+// generic public submission form; posts multipart to a wordpress rest endpoint that creates a pending post for review
 export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' }) {
   const [values, setValues] = useState(() =>
     Object.fromEntries(fields.map((f) => [f.name, f.type === 'file' ? null : '']))
@@ -27,9 +15,7 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
     setValues((v) => ({ ...v, [name]: value }));
   }
 
-  // Image uploads can take a while on shared hosting (WordPress resizes them
-  // into every registered size server-side), so warn before an accidental
-  // close/navigate loses the submission mid-flight.
+  // warn before an accidental close/navigate loses the submission mid-flight
   useEffect(() => {
     if (status !== 'sending') return;
 
@@ -46,9 +32,7 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
     e.preventDefault();
 
     if (honeypot) {
-      // Bots that auto-fill every field trip this. Pretend it worked so
-      // they don't learn to skip the field next time.
-      setStatus('success');
+      setStatus('success'); // bots that auto-fill every field trip this; pretend it worked
       return;
     }
 
@@ -68,8 +52,7 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
         if (value != null && value !== '') body.append(name, value);
       }
 
-      // No Content-Type header: the browser sets the multipart boundary
-      // itself, and overriding it here would break the upload.
+      // no content-type header: the browser sets the multipart boundary itself
       const res = await fetch(endpoint, { method: 'POST', body });
       if (!res.ok) throw new Error('Request failed');
       setStatus('success');
@@ -110,10 +93,7 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
             >
               <option value="">Select…</option>
               {f.options.map((o) => {
-                // Plain strings double as both value and label (skip levels,
-                // difficulty). Object options let a field show a friendlier
-                // label than the value actually submitted (e.g. a technique
-                // name in the UI, its post ID in the request).
+                // plain strings double as value + label; object options let the label differ from the submitted value
                 const { value, label } = typeof o === 'string' ? { value: o, label: o } : o;
                 return (
                   <option key={value} value={value}>
@@ -143,8 +123,7 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
         </label>
       ))}
 
-      {/* Honeypot: hidden from real visitors via CSS + aria-hidden + a
-          negative tab index, so only bots that fill every field find it. */}
+      {/* hidden from real visitors, only bots that fill every field find it */}
       <label className="submit-form__honeypot" aria-hidden="true">
         Leave this field empty
         <input

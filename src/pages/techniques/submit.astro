@@ -1,27 +1,10 @@
 ---
 import Base from '../../layouts/Base.astro';
 import BackLink from '../../components/BackLink.astro';
-import SubmitForm from '../../components/SubmitForm.jsx';
-import { getTechniques, restBase } from '../../lib/wp.js';
+import TechniqueSubmitForm from '../../components/TechniqueSubmitForm.jsx';
+import { restBase } from '../../lib/wp.js';
 
 const endpoint = `${restBase()}/denshattack/v1/submit-technique`;
-
-// Runs at build time. Only base techniques are offered as a parent — a
-// variant of a variant would be a confusing third level of nesting.
-const allTechniques = await getTechniques();
-const baseTechniques = allTechniques.filter((t) => !t.variantOfId);
-
-const fields = [
-  { name: 'name', label: 'Technique name', required: true, maxLength: 120 },
-  {
-    name: 'variantOf',
-    label: 'Variant of (optional)',
-    type: 'select',
-    options: baseTechniques.map((t) => ({ value: String(t.databaseId), label: t.title })),
-  },
-  { name: 'youtubeLink', label: 'YouTube link', type: 'url', required: true },
-  { name: 'description', label: 'Description', type: 'textarea', maxLength: 2000 },
-];
 ---
 
 <Base title="Add a technique" description="Submit a new technique for review.">
@@ -34,6 +17,6 @@ const fields = [
       once it's reviewed.
     </p>
 
-    <SubmitForm client:load endpoint={endpoint} submitLabel="Add technique" fields={fields} />
+    <TechniqueSubmitForm client:load endpoint={endpoint} />
   </main>
 </Base>

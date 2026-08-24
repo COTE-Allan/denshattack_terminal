@@ -3,34 +3,23 @@ import { useMemo, useState } from 'react';
 import { difficultyStarCount, formatSeconds, timeSaveWatchCount } from '../lib/format.js';
 import { SKIP_SORT_OPTIONS, SKIP_SORTS, filterSkips, groupSkipsByLevel } from '../lib/skipSort.js';
 import { useLearnedSkips } from '../lib/useLearned.js';
+import { useSkips } from '../lib/useContent.js';
+import CatalogStatus from './CatalogStatus.jsx';
 import { IconRow, SortSelect } from './CatalogUI.jsx';
 
-/**
- * A plain checklist: tick off skips as you learn them. Grouped by level
- * since that's how you'd actually work through them (switchable to a flat
- * sort once there are enough skips that "level" isn't the fastest way to
- * find one). Deliberately not a "complete the catalogue" flow — some
- * skips are mutually exclusive alternatives for the same section (you'd
- * pick whichever saves more time, and only one can happen in a given
- * run), and the site has no way to know which is which, so there's no
- * real "100%" to aim for here. This is just a personal record of what you
- * know, shared with the per-card toggle on the main catalogue (same
- * localStorage key).
- */
-export default function PracticeMode({ skips }) {
+// a plain checklist, grouped by level, shared with the per-card toggle on the main catalogue (same localStorage key)
+export default function PracticeMode() {
+  const { data: skips, loading, error } = useSkips();
   const { learned, loaded, toggle } = useLearnedSkips();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('level');
 
-  const filtered = useMemo(() => filterSkips(skips, search), [skips, search]);
+  const filtered = useMemo(() => (skips ? filterSkips(skips, search) : []), [skips, search]);
   const grouped = sort === 'level' ? groupSkipsByLevel(filtered) : null;
   const flat = sort === 'level' ? null : [...filtered].sort(SKIP_SORTS[sort]);
-  // Groups auto-expand while searching, so a match isn't hidden behind a
-  // collapsed level; left alone (browser-native, uncontrolled) otherwise,
-  // so a level opened by hand stays open — same behavior as /route-sheet.
-  const forceOpen = search.trim() !== '' ? true : undefined;
+  const forceOpen = search.trim() !== '' ? true : undefined; // groups auto-expand while searching
 
-  if (!loaded) return null;
+  if (!loaded || loading || error) return <CatalogStatus loading={loading || !loaded} error={error} />;
 
   const learnedCount = skips.filter((s) => learned.has(s.id)).length;
 

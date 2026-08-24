@@ -22,13 +22,7 @@ const isSpeedrunActive = speedrunLinks.some((l) => isCurrent(l.href));
 
 <header class="site-header">
   <div class="site-header__inner">
-    {/*
-      .site-header__brand-row exists so the logo and the mobile toggle sit
-      on a real flex row together — an absolutely-positioned toggle used to
-      float on top of the logo's own clickable area regardless of the
-      logo's actual width. On desktop this row is just the logo; the
-      toggle inside it stays display:none there (see global.scss).
-    */}
+    {/* logo + mobile toggle share a real flex row instead of an absolutely-positioned toggle */}
     <div class="site-header__brand-row">
       <a class="site-header__logo" href="/">
         <img
@@ -40,12 +34,7 @@ const isSpeedrunActive = speedrunLinks.some((l) => isCurrent(l.href));
         />
       </a>
 
-      {/*
-        Hidden above 720px (see the mobile media query in global.scss);
-        below it, toggles .site-header--nav-open on the <header> to
-        show/hide .site-header__nav, which stays the exact same markup
-        either way — only its visibility changes with viewport width.
-      */}
+      {/* hidden above 720px; below it, toggles .site-header--nav-open to show/hide the nav */}
       <button
         type="button"
         class="mobile-nav-toggle"
@@ -62,12 +51,7 @@ const isSpeedrunActive = speedrunLinks.some((l) => isCurrent(l.href));
     <nav class="site-header__nav" id="mobile-nav-panel" aria-label="Main navigation">
       <ul class="site-header__nav-list">
         <li class="site-header__nav-item">
-          {/*
-            <details>/<summary> gives a click-to-open, keyboard-accessible
-            dropdown with no client-side framework needed. The outside-click
-            listener below is the only bit of JS: <details> otherwise stays
-            open until its own summary is clicked again.
-          */}
+          {/* <details>/<summary>: keyboard-accessible dropdown, no framework needed */}
           <details class="nav-dropdown">
             <summary
               class="site-header__nav-link nav-dropdown__summary"
@@ -115,10 +99,28 @@ const isSpeedrunActive = speedrunLinks.some((l) => isCurrent(l.href));
 </header>
 
 <script>
-  // Delegated on `document`, live-queried at click time rather than bound
-  // per-element at parse time: keeps working after a view transition swaps
-  // in a new header (`document` persists across transitions, the header's
-  // own DOM nodes don't).
+  // measures the real header height instead of trusting the hardcoded --header-h fallback, which drifted
+  // out of sync on mobile (wrapped content made the header taller than the css assumed, leaving a gap
+  // above the hero that relies on --header-h to pull itself up underneath the sticky header)
+  let headerResizeObserver;
+
+  function syncHeaderHeight() {
+    const header = document.querySelector('.site-header');
+    if (!header) return;
+    document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
+    return header;
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    headerResizeObserver?.disconnect();
+    const header = syncHeaderHeight();
+    if (header && 'ResizeObserver' in window) {
+      headerResizeObserver = new ResizeObserver(syncHeaderHeight);
+      headerResizeObserver.observe(header);
+    }
+  });
+
+  // delegated on `document`, which persists across view transitions, unlike the header's own nodes
   document.addEventListener('click', (e) => {
     document.querySelectorAll('.nav-dropdown[open]').forEach((dropdown) => {
       if (!dropdown.contains(e.target)) dropdown.removeAttribute('open');
@@ -132,7 +134,7 @@ const isSpeedrunActive = speedrunLinks.some((l) => isCurrent(l.href));
       return;
     }
 
-    // Close the panel on an outside click, same as the dropdown above.
+    // closes the panel on an outside click, same as the dropdown above
     document.querySelectorAll('.site-header--nav-open').forEach((header) => {
       if (e.target.closest('.site-header__nav')) return;
       header.classList.remove('site-header--nav-open');

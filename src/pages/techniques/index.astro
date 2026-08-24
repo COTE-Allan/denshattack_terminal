@@ -1,15 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
 import TechniqueCatalog from '../../components/TechniqueCatalog.jsx';
-import { getTechniques } from '../../lib/wp.js';
-
-// Runs at build time. If WordPress is unreachable the build fails loudly
-// rather than shipping an empty catalogue.
-const allTechniques = await getTechniques();
-
-// Variants have their own page (linked from their parent's), so they don't
-// also need a slot in the main grid.
-const techniques = allTechniques.filter((t) => !t.variantOfId);
 ---
 
 <Base title="Techniques" description="Speedrun techniques.">
@@ -19,11 +10,8 @@ const techniques = allTechniques.filter((t) => !t.variantOfId);
       <a class="btn" href="/techniques/submit/">Add a technique</a>
     </div>
 
-    {/*
-      client:load hydrates on page load so filters work immediately.
-      Swap for client:visible if the list sits far down the page.
-    */}
-    <TechniqueCatalog client:load techniques={techniques} />
+    {/* client:load hydrates on page load: fetches and filters entirely in the browser */}
+    <TechniqueCatalog client:load />
 
     <div class="page-footer-cta">
       <a class="btn" href="/techniques/submit/">Add a technique</a>

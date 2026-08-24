@@ -1,4 +1,4 @@
-/** Shared display helpers for skip cards and detail pages. */
+// shared display helpers for skip cards and detail pages
 
 export const TIME_SAVE_TIERS = [
   { max: 10, watches: 1, short: '1–10s', label: 'Around 1 to 10 seconds of time save.' },
@@ -8,10 +8,7 @@ export const TIME_SAVE_TIERS = [
   { max: Infinity, watches: 5, short: '3m+', label: 'More than 3 minutes of time save.' },
 ];
 
-/**
- * Maps a time save in seconds to a watch-icon tier.
- * Returns null when the value isn't a usable number.
- */
+// maps a time save in seconds to a watch-icon tier, null if not a usable number
 export function timeSaveTier(seconds) {
   if (!Number.isFinite(seconds) || seconds <= 0) return null;
   return (
@@ -20,23 +17,12 @@ export function timeSaveTier(seconds) {
   );
 }
 
-/**
- * How many watch icons a time save is worth (1-5). Callers render this many
- * <Clock> icons themselves — see Catalog.jsx (React) and skips/[slug].astro
- * (Astro) for the two icon-set adapters. Returns 0 when the value isn't a
- * usable number, so callers can render nothing.
- */
+// how many watch icons a time save is worth (1-5), 0 if not a usable number
 export function timeSaveWatchCount(seconds) {
   return timeSaveTier(seconds)?.watches ?? 0;
 }
 
-/**
- * Seconds to a readable value, e.g. 24 -> "~24s", 125 -> "~2m 05s",
- * 5400 -> "~1h 30m". Every time-save figure on the site is a rough,
- * self-reported estimate (see TIME_SAVE_TIERS's own "Around ... seconds"
- * tooltip text), so the "~" is part of the value everywhere it's shown —
- * a card, a detail page, or the site-wide total on /stats.
- */
+// seconds to a readable estimate, e.g. 24 -> "~24s", 125 -> "~2m 05s", 5400 -> "~1h 30m"
 export function formatSeconds(seconds) {
   if (!Number.isFinite(seconds)) return '';
   if (seconds < 60) return `~${seconds}s`;
@@ -51,35 +37,24 @@ export function formatSeconds(seconds) {
   return `~${h}h ${String(m).padStart(2, '0')}m`;
 }
 
-/**
- * How many star icons a numeric difficulty is worth (1-5, filled stars
- * only). Callers render this many <Star> icons themselves, same pattern as
- * `timeSaveWatchCount`. Returns 0 when difficulty isn't a usable number, so
- * callers can fall back to showing the raw value instead.
- */
+// how many star icons a difficulty is worth (1-5), 0 if not a usable number
 export function difficultyStarCount(difficulty, max = 5) {
   const n = Number(difficulty);
   if (!Number.isFinite(n) || n <= 0) return 0;
   return Math.min(Math.round(n), max);
 }
 
-/**
- * Whether a WordPress `modified` timestamp falls within the last `days`
- * days, for a "New" badge on catalogue cards. Evaluated at build time, so
- * the badge is only as fresh as the last build/deploy, not the visitor's
- * clock — fine for a site that rebuilds on every content change, but it
- * won't clear itself if the site then goes a while without a rebuild.
- */
+// whether a modified timestamp is within the last `days` days, evaluated at build time (not the visitor's clock)
 export function isRecent(modified, days = 7) {
   const modifiedAt = new Date(modified).getTime();
   if (Number.isNaN(modifiedAt)) return false;
   return Date.now() - modifiedAt < days * 24 * 60 * 60 * 1000;
 }
 
-/** Shared across the site-wide search (header quick search + /search) and /new. */
+// shared across site-wide search and /new
 export const TYPE_LABELS = { skip: 'Skip', technique: 'Technique', sticker: 'Sticker' };
 
-/** Pull a YouTube video id out of any of the usual URL shapes. */
+// pulls a youtube video id out of any of the usual url shapes
 export function youtubeId(url) {
   const m = String(url || '').match(
     /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/
@@ -87,11 +62,7 @@ export function youtubeId(url) {
   return m ? m[1] : null;
 }
 
-/**
- * Seconds into the clip a YouTube link points to, from its `t=`/`start=`
- * param (accepts both plain seconds and YouTube's "1h2m3s" share format).
- * Returns null when the link carries no timestamp.
- */
+// seconds into the clip from a youtube link's t=/start= param, null if none
 export function youtubeStart(url) {
   const m = String(url || '').match(/[?&](?:t|start)=([0-9hms]+)/i);
   if (!m) return null;

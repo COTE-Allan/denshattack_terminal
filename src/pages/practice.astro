@@ -1,9 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import PracticeMode from '../components/PracticeMode.jsx';
-import { getSkips } from '../lib/wp.js';
-
-const skips = await getSkips();
 ---
 
 <Base
@@ -15,6 +12,6 @@ const skips = await getSkips();
       <h1>Practice</h1>
     </div>
 
-    <PracticeMode client:load skips={skips} />
+    <PracticeMode client:load />
   </main>
 </Base>

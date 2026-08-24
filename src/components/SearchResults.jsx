@@ -1,22 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { TYPE_LABELS } from '../lib/format.js';
+import { useAllContent } from '../lib/useContent.js';
+import CatalogStatus from './CatalogStatus.jsx';
 import { Card } from './CatalogUI.jsx';
+import SkeletonGrid from './SkeletonCard.jsx';
 
-/**
- * Site-wide search over every skip, technique, and sticker at once. The
- * combined list is embedded at build time (see search.astro / getAllContent
- * in wp.js), so this is instant client-side filtering, same pattern as each
- * catalogue's own search — just over all three types together.
- */
-export default function SearchResults({ items }) {
+// site-wide search over every skip/technique/sticker, fetched client-side so it's always current
+export default function SearchResults() {
+  const { data: items, loading, error } = useAllContent();
   const [search, setSearch] = useState('');
 
-  // This is a static site: the ?q= a visitor arrives with can only be read
-  // client-side, after mount, from the real browser URL — Astro can't see
-  // it at build time. Starting from '' and updating in an effect (rather
-  // than reading location.search in useState's initializer) keeps the
-  // server-rendered and first client render identical, avoiding a
-  // hydration mismatch on the input's value.
+  // static site: ?q= can only be read client-side after mount, so start from '' to avoid a hydration mismatch
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get('q');
     if (q) setSearch(q);
@@ -24,7 +18,7 @@ export default function SearchResults({ items }) {
 
   const results = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return [];
+    if (!q || !items) return [];
     return items.filter((i) => `${i.title} ${i.summary}`.toLowerCase().includes(q));
   }, [items, search]);
 
@@ -46,6 +40,10 @@ export default function SearchResults({ items }) {
 
       {search.trim() === '' ? (
         <p className="catalog__empty">Type something to search across the whole site.</p>
+      ) : loading ? (
+        <SkeletonGrid />
+      ) : error ? (
+        <CatalogStatus error={error} />
       ) : (
         <>
           <p className="catalog__count" aria-live="polite">

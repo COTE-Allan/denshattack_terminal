@@ -9,7 +9,7 @@ const {
 ---
 
 <div class:list={['search-box', { 'search-box--large': size === 'large' }]}>
-  {/* GET form: works with no JS, plain navigation to /search?q=... */}
+  {/* get form: works with no js, plain navigation to /search?q=... */}
   <form class="search-box__form" action="/search" method="get" autocomplete="off">
     <input
       class="search-box__input"
@@ -27,27 +27,19 @@ const {
     </button>
   </form>
 
-  {/*
-    Populated client-side from /search-index.json (see
-    src/pages/search-index.json.js) as the visitor types — see the script
-    below. Empty/hidden until then, so it degrades to "nothing" rather than
-    an error if JS fails to load.
-  */}
+  {/* populated by a live wordpress fetch as the visitor types, see the script below */}
   <div class="search-box__results" id={resultsId} role="listbox" hidden></div>
 </div>
 
 <script>
   import { TYPE_LABELS } from '../lib/format.js';
+  import { getAllContent } from '../lib/wp.js';
 
   const MAX_QUICK_RESULTS = 6;
 
-  let indexPromise = null;
+  // getAllContent() is memoized in wp.js, so this only hits wordpress once per page even with header + hero search boxes both mounted
   function loadSearchIndex() {
-    // Fetched lazily (on first keystroke, not on page load) and cached for
-    // the rest of the session — every page carries at least one of these
-    // (the header's), so paying for the fetch once matters.
-    indexPromise ??= fetch('/search-index.json').then((r) => r.json());
-    return indexPromise;
+    return getAllContent();
   }
 
   function escapeHtml(text) {
@@ -56,10 +48,7 @@ const {
     return div.innerHTML;
   }
 
-  // Classes only, no shared ID: this component can appear more than once on
-  // the same page (header + homepage hero), so each instance's results live
-  // are found relative to the input that triggered the event, not looked up
-  // by a single fixed ID.
+  // classes only, no shared id: this can appear twice on one page (header + hero), so results are looked up relative to the triggering input
   function getResultsEl(input) {
     return input.closest('.search-box')?.querySelector('.search-box__results') ?? null;
   }
@@ -103,9 +92,7 @@ const {
     }
 
     const items = await loadSearchIndex();
-    // The input's value can change while the fetch above was in flight —
-    // bail if this response is no longer for the current text.
-    if (input.value.trim().toLowerCase() !== q) return;
+    if (input.value.trim().toLowerCase() !== q) return; // bail if the input changed while the fetch was in flight
 
     const matches = items
       .filter((item) => `${item.title} ${item.summary}`.toLowerCase().includes(q))

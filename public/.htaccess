@@ -1,0 +1,15 @@
+# serves the same static "view" shell for every skip/sticker/technique slug (astro no longer
+# pre-builds one html file per item — the shell fetches wordpress client-side once loaded)
+RewriteEngine On
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^skips/[^/]+/?$ /skips/view/index.html [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^stickers/[^/]+/?$ /stickers/view/index.html [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^techniques/[^/]+/?$ /techniques/view/index.html [L]

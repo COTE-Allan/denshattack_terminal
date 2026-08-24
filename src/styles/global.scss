@@ -1,7 +1,7 @@
 @use 'variables' as *;
 @use 'sass:color';
 
-// ---- Reset -----------------------------------------------------------
+// reset
 
 *,
 *::before,
@@ -9,37 +9,33 @@
   box-sizing: border-box;
 }
 
-// Rough resting height of .site-header, used to pull the homepage hero up
-// underneath it (see .hero) so the hero starts at the true top of the page
-// instead of below the header. Kept in sync with the header's own
-// padding/logo-size change in the max-width: 720px block further down.
+// fallback for the instant before header.astro's script measures the real height; kept roughly
+// in sync with the header height override at 720px, but see that script for the value that actually counts
 :root {
   --header-h: 6.7rem;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 body {
   margin: 0;
-  // Makes body itself the containing block for .page-sticker's absolute
-  // positioning, instead of leaving it to resolve against the initial
-  // containing block (viewport-sized, not document-sized) — that ambiguity
-  // is what let the sticker end up pinned near the fold on scrollable pages
-  // instead of at the true bottom of the document.
+  // containing block for .page-sticker's absolute positioning
   position: relative;
   overflow-x: hidden; // .hero breaks out to 100vw; this keeps that from adding a horizontal scrollbar
-  // Sticky footer: body is at least a full screen tall and laid out as a
-  // column, so .site-footer's margin-top: auto can push it down to the
-  // bottom on short pages (see .site-footer). 100dvh after the 100vh
-  // fallback avoids the classic mobile bug where 100vh is taller than the
-  // actually-visible viewport (browser chrome included), which made the
-  // footer overshoot past the bottom of the screen.
+  // sticky footer: flex column + min-height lets margin-top: auto push it down
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  // A very faint yellow glow at the top of the page (sits behind the header,
-  // which paints its own opaque background so it just frames it), plus a
-  // halftone of yellow dots creeping in from both screen edges. Every dot
-  // shares the same opacity, only its radius shrinks toward the content.
+  // faint yellow glow + dot halftone fading in from the screen edges
   background-color: $color-bg;
   background-image:
     radial-gradient(ellipse 900px 320px at 50% 0%, rgba($color-border, 0.08), transparent 70%),
@@ -52,10 +48,7 @@ body {
   line-height: 1.5;
 }
 
-// Decorative sticker, anchored to the bottom-right of the full document
-// (body is its containing block, see above) rather than the viewport, so it
-// sits at the true bottom of the page and scrolls away with the content
-// like the dot pattern, even on pages long enough to need scrolling.
+// anchored to the document, not the viewport, so it scrolls away with the page
 .page-sticker {
   position: absolute;
   right: 2.5rem;
@@ -69,8 +62,7 @@ body {
   opacity: 20%;
 }
 
-// Below tablet width there just isn't room for these decorations without
-// them overlapping real content, so drop them rather than fight for space.
+// no room for these decorations below tablet width
 @media (max-width: 900px) {
   body {
     background-image: radial-gradient(
@@ -91,9 +83,7 @@ a {
   color: inherit;
 }
 
-// Shared heading scale so every page starts from the same rhythm; pages
-// only need to override what's actually different (e.g. .page-header h1
-// zeroing its margin for a flex layout).
+// shared heading rhythm; pages override only what differs
 h1,
 h2,
 h3 {
@@ -102,19 +92,20 @@ h3 {
   margin: 0 0 1rem;
 }
 
+// clamp() scales smoothly instead of a fixed size + separate mobile override
 h1 {
-  font-size: 1.85rem;
+  font-size: clamp(1.5rem, 1.2rem + 1.3vw, 1.85rem);
 }
 
 h2 {
-  font-size: 1.3rem;
+  font-size: clamp(1.15rem, 1.02rem + 0.55vw, 1.3rem);
 }
 
 h3 {
   font-size: 1.05rem;
 }
 
-// Consistent, visible keyboard focus indicator using the brand accent.
+// visible keyboard focus indicator using the brand accent
 :focus-visible {
   outline: 2px solid $color-border;
   outline-offset: 2px;
@@ -126,14 +117,9 @@ main {
   padding: 2rem 1.5rem 4rem;
 }
 
-// ---- Header ------------------------------------------------------------
+// header
 
-// A rounded pill sharing the same max-width/gutters as the page content,
-// instead of a full-bleed bar, floating free with room around it. Sticky so
-// it stays reachable while scrolling; the top padding is what keeps the gap
-// above it once stuck. Not sticky on mobile (see the media query below):
-// with the nav stacked into a taller box there, keeping it pinned would eat
-// too much of a small screen's vertical space while scrolling.
+// sticky pill nav, matching the content column; static on mobile, see the 720px query
 .site-header {
   position: sticky;
   top: 0;
@@ -155,18 +141,13 @@ main {
   gap: 1rem;
 }
 
-// Just the logo on desktop (the toggle inside stays hidden there). On
-// mobile this becomes its own row — logo left, toggle right — laid out
-// with real flexbox instead of absolute positioning, which used to
-// overlap the logo regardless of how wide the logo image actually is.
+// mobile: logo + toggle as a real flex row instead of absolute positioning
 .site-header__brand-row {
   display: flex;
   align-items: center;
 }
 
-// Hidden above 720px — the full nav shows inline there instead. See the
-// mobile media query below for its shown state and .site-header__nav's
-// collapse/expand.
+// hidden above 720px, the full nav shows inline there instead
 .mobile-nav-toggle {
   display: none;
   align-items: center;
@@ -246,9 +227,7 @@ main {
   }
 }
 
-// "Speedrun" nav item: a <details>/<summary> dropdown, so it opens/closes
-// without any framework, works with the keyboard, and degrades to a plain
-// expanded list if CSS fails to load.
+// details/summary dropdown: no js framework needed, keyboard accessible
 .nav-dropdown {
   position: relative;
 }
@@ -258,10 +237,10 @@ main {
   align-items: center;
   gap: 0.3rem;
   cursor: pointer;
-  list-style: none; // Firefox's ::marker
+  list-style: none; // firefox's ::marker
 
   &::-webkit-details-marker {
-    display: none; // Chrome/Safari's default triangle
+    display: none; // chrome/safari's default triangle
   }
 
   .nav-dropdown[open] & {
@@ -314,11 +293,7 @@ main {
   }
 }
 
-// Site-wide search (<SearchBox>, used in the header and the homepage
-// hero), GET-submitted to /search — works with no JS, and is how a static
-// site (no server to read a query string at request time) still supports a
-// prefilled, shareable "?q=..." search URL. The quick-results dropdown
-// positions itself relative to this wrapper.
+// get-submitted search box, used in the header and the home hero, works with no js
 .search-box {
   position: relative;
 }
@@ -350,10 +325,7 @@ main {
     color: $color-text-muted;
   }
 
-  // The pill (.search-box__form) already shows focus via its own
-  // border-color on :focus-within — a square outline on the bare input
-  // clashes with that rounded shape, so skip the generic :focus-visible
-  // outline here specifically.
+  // the pill already shows focus via border-color, skip the square outline here
   &:focus-visible {
     outline: none;
   }
@@ -380,8 +352,7 @@ main {
   }
 }
 
-// Bigger version for the homepage hero, centered and standing on its own
-// rather than tucked into the header pill.
+// bigger version for the home hero
 .search-box--large {
   max-width: 480px;
   margin: 0 auto;
@@ -458,12 +429,7 @@ main {
   padding: 0.5rem 0.75rem;
 }
 
-// Below this width the logo + full nav no longer fit on one line without
-// overflowing. The nav collapses behind a hamburger toggle instead of
-// stacking everything open — search stays visible (it's used more often
-// than the nav links) below the logo/toggle row. Everything here also
-// trims down a size or two from desktop: a mobile header stacked into
-// several rows adds up fast if each row is full-sized.
+// below 720px: nav collapses behind a hamburger, search stays visible
 @media (max-width: 720px) {
   :root {
     --header-h: 5rem;
@@ -495,8 +461,7 @@ main {
     display: flex;
   }
 
-  // Collapsed by default; .site-header--nav-open (toggled by the button
-  // above) reveals it as its own full-width panel below the logo.
+  // collapsed by default, toggled via .site-header--nav-open
   .site-header__nav {
     display: none;
     padding-top: 0.75rem;
@@ -513,8 +478,7 @@ main {
     gap: 0.5rem;
   }
 
-  // Bigger tap targets once a mouse-hover-tuned pill nav becomes
-  // finger-tuned: ~44px is the usual minimum comfortable touch target.
+  // bigger tap targets for touch
   .site-header__nav-link {
     padding: 0.55rem 1rem;
   }
@@ -529,7 +493,7 @@ main {
   }
 }
 
-// ---- Catalog / filters ---------------------------------------------------
+// catalog filters
 
 .catalog__filters {
   display: flex;
@@ -560,10 +524,16 @@ main {
   color: $color-text;
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
+  transition: border-color 0.15s ease;
 
   &:focus {
     outline: none;
     border-color: $color-border;
+  }
+
+  // only flags red after interaction, not on page load
+  &:user-invalid {
+    border-color: #ff6b6b;
   }
 }
 
@@ -584,8 +554,7 @@ main {
   }
 }
 
-// Result count + sort picker share a row, count on the left, sort on the
-// right — the sort control doesn't need its own filter__label-height row.
+// count + sort share one row
 .catalog__toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -607,8 +576,7 @@ main {
   margin: 0;
 }
 
-// "Learned" progress (see the per-card toggle and /practice), shared
-// between Catalog.jsx and PracticeMode.jsx.
+// shared between catalog and /practice
 .catalog__learned-progress {
   display: flex;
   flex-wrap: wrap;
@@ -660,10 +628,7 @@ main {
   }
 }
 
-// Clickable browse-by list (currently: sticker tags, toggling the search
-// box). `<button>` and `<a>` variants share the same look, so future lists
-// like this can use either depending on whether clicking should filter
-// in place or navigate somewhere.
+// clickable browse-by list, button or link depending on filter vs navigate
 .pill-list {
   list-style: none;
   display: flex;
@@ -704,19 +669,15 @@ main {
   }
 }
 
-// Denser variant for the route sheet's picker, where there can be a lot of
-// these in view at once.
+// denser variant for the route sheet's picker
 .pill--compact {
   padding: 0.25rem 0.65rem;
   font-size: 0.75rem;
 }
 
-// ---- Stats page ------------------------------------------------------
+// stats page
 
-// Flex instead of a minmax() grid: a grid's auto-fill can't drop below its
-// column minimum, which forced a single column on narrow screens. Flex-wrap
-// lets tiles shrink and wrap freely, so there's always more than one per row
-// when the width allows it.
+// flex instead of grid so tiles can wrap below the column minimum
 .stat-grid {
   list-style: none;
   margin: 0;
@@ -727,10 +688,7 @@ main {
 }
 
 .stat-tile {
-  // Grows to fill leftover row space, starts from 200px, but won't shrink
-  // past its label's own one-line width (see .stat-tile__label) — that's
-  // what sends a whole tile to the next row instead of wrapping the label
-  // text inside it.
+  // grows to fill the row, won't shrink below its label's own width
   flex: 1 1 200px;
   background: $color-card-bg;
   border: 2px solid $color-border-subtle;
@@ -747,10 +705,7 @@ main {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  // Keeps "Techniques catalogued" (the longest label) on one line; left at
-  // the flex item's default min-width: auto, this is what the tile refuses
-  // to shrink below.
-  white-space: nowrap;
+  white-space: nowrap; // keeps the longest label on one line
 
   svg {
     flex-shrink: 0;
@@ -763,12 +718,8 @@ main {
   font-size: 2rem;
   font-weight: 600;
   line-height: 1.15;
-  // Proportional figures for a big standalone number — tabular-nums is for
-  // columns that need to align, which a single stat-tile value never is.
-  font-variant-numeric: proportional-nums;
-  // A name (top finder, top artist) can be longer than a plain count —
-  // wrap it instead of overflowing the tile.
-  overflow-wrap: break-word;
+  font-variant-numeric: proportional-nums; // standalone number, not a column to align
+  overflow-wrap: break-word; // names can run longer than a plain count
 }
 
 .stat-tile__caption {
@@ -786,14 +737,107 @@ main {
   border-radius: $radius;
 }
 
-// ---- Catalogue cards ---------------------------------------------------
-// Shared by every catalogue (skips, stickers, ...) via the <Card> component.
+// shown while a catalog/detail island's wordpress fetch is in flight
+.catalog__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: $color-text-muted;
+  text-align: center;
+  margin: 0;
+  padding: 3rem 1.5rem;
+}
 
-// RGB triplets (not hex) so they can feed straight into rgba() for the
-// hover glow below. Each catalogue nudges the brand yellow toward a
-// different hue so the three card grids stay visually distinct without
-// breaking from the palette. Default matches $color-border (#f6e000) —
-// update this if that token ever changes.
+.catalog__spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid $color-border-subtle;
+  border-top-color: $color-border;
+  border-radius: 50%;
+  animation: catalog-spin 0.7s linear infinite;
+}
+
+@keyframes catalog-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// placeholder cards shown while a catalog/recent-items island's wordpress fetch is in flight,
+// reusing .card/.card__media/.card__body so the grid doesn't jump when real cards swap in
+.card--skeleton {
+  cursor: default;
+
+  &:hover,
+  &:focus-within {
+    transform: none;
+    background: $color-card-bg;
+
+    &::before {
+      opacity: 0;
+      animation: none;
+    }
+  }
+
+  &::after {
+    display: none; // no halftone texture on a placeholder
+  }
+}
+
+.skeleton-shimmer,
+.skeleton-line {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    $color-border-subtle 25%,
+    color.adjust($color-border-subtle, $lightness: 6%) 37%,
+    $color-border-subtle 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+.skeleton-shimmer {
+  width: 100%;
+  height: 100%;
+}
+
+.skeleton-line {
+  height: 0.9rem;
+  margin: 0 0 0.6rem;
+
+  &--title {
+    height: 1.1rem;
+    width: 70%;
+    margin-bottom: 0.85rem;
+  }
+
+  &--short {
+    width: 45%;
+    margin-bottom: 0;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer,
+  .skeleton-line {
+    animation: none;
+  }
+}
+
+// catalogue cards, shared by every catalogue via <card>
+
+// rgb triplets feed rgba() for the hover glow, keep in sync with $color-border
 .catalog {
   --card-accent-rgb: 246, 224, 0;
 }
@@ -811,9 +855,7 @@ main {
   margin: 0;
   padding: 0;
   display: grid;
-  // 300px fits 3 columns within the page's 1000px content width (minus its
-  // gutters and the 2 gaps between cards) on a desktop screen.
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); // 300px fits 3 columns at max-width
   align-items: start; // cards keep their own height, don't stretch to match tallest sibling
   gap: 1.5rem;
 }
@@ -840,11 +882,7 @@ main {
   }
 }
 
-// The glow lives on its own layer instead of animating .card's box-shadow
-// directly: box-shadow forces a repaint every frame (blur/spread aren't
-// compositable), which is what made the previous version choppy. Animating
-// this pseudo-element's opacity instead is compositor-only, so it stays
-// smooth regardless of how many cards are on the page.
+// glow on its own layer so the pulse animates opacity, not box-shadow (avoids repaint jank)
 .card::before {
   content: '';
   position: absolute;
@@ -856,9 +894,7 @@ main {
   transition: opacity 0.15s ease;
 }
 
-// The one recurring spot for the halftone motif (see body's own edge
-// pattern) — small and faint enough to read as texture, not decoration,
-// even repeated across a whole grid of cards.
+// halftone motif, faint enough to read as texture
 .card::after {
   content: '';
   position: absolute;
@@ -888,9 +924,7 @@ main {
   }
 }
 
-// Overrides the generic :focus-visible outline: the link fills the whole
-// card, so a positive offset would spill into the grid gap instead of
-// hugging the card's own border.
+// negative offset keeps the outline inside the card instead of the grid gap
 .card__link:focus-visible {
   outline-offset: -4px;
   border-radius: calc(#{$radius} - 3px);
@@ -903,9 +937,7 @@ main {
   flex-direction: column;
 }
 
-// Bleeds to the card edges so the thumbnail fills the top of the card.
-// Radius is inset by the border width so it nests inside the card's own
-// rounded corners instead of poking past them.
+// bleeds to the card edges, radius inset by the border width
 .card__media {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -930,9 +962,7 @@ main {
   }
 }
 
-// Shown instead of .card__media-thumb when there's no thumbnail (e.g. a
-// technique with no linked video), so every card still gets a media slot
-// and the grid row stays even.
+// shown when a card has no thumbnail
 .card__media-placeholder {
   width: 100%;
   height: 100%;
@@ -958,8 +988,7 @@ main {
   border-radius: 999px;
 }
 
-// Sits over the card's top-right corner as a sibling of .card__link, not
-// nested inside it (see the comment on <Card> in CatalogUI.jsx for why).
+// sibling of .card__link, not nested (interactive control inside <a> is invalid html)
 .card__learned-toggle {
   position: absolute;
   top: 0.6rem;
@@ -1036,9 +1065,7 @@ main {
   margin: 0;
 }
 
-// Sticker tags can run long ("meme harambe flowery ..."); clip to one line
-// instead of wrapping or overflowing the card. The full list is still
-// available via the native title tooltip (see StickerCatalog.jsx).
+// clips long sticker tag lists to one line
 .card__meta-value--truncate {
   display: block;
   max-width: 100%;
@@ -1060,9 +1087,7 @@ main {
   }
 }
 
-// ---- Detail pages (skip, sticker, ...) ----------------------------------
-// Structural classes (.detail__*) are shared; each page keeps its own
-// content-specific bits (video embed, sticker download) alongside them.
+// detail pages (skip, sticker, ...), shared .detail__* classes
 
 .breadcrumb {
   margin: 0 0 1.5rem;
@@ -1107,7 +1132,7 @@ main {
   }
 }
 
-// WYSIWYG content from the WordPress editor (set:html): basic prose rhythm.
+// wysiwyg content from wordpress
 .detail__body {
   color: $color-text;
   line-height: 1.7;
@@ -1128,9 +1153,7 @@ main {
   }
 }
 
-// Responsive 16:9 video embed. Capped at 480px wide so every detail page
-// (skip, technique, ...) shows demonstration videos at the same size,
-// regardless of how wide the page's content column is.
+// capped at 480px so every detail page's video is the same size
 .detail__video {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -1149,7 +1172,7 @@ main {
   }
 }
 
-// A single full-width image on a detail page (sticker screenshot, etc.).
+// full-width image on a detail page
 .detail__media {
   display: block;
   width: 100%;
@@ -1179,7 +1202,7 @@ main {
   flex-shrink: 0;
 }
 
-// Note on a variant's own page, linking back to the technique it's a variant of.
+// links back to the parent technique
 .technique-page__variant-of {
   color: $color-text-muted;
   margin: -1rem 0 1.75rem;
@@ -1190,14 +1213,14 @@ main {
   }
 }
 
-// Links to the other techniques that point back at this one via variantOf.
+// links to techniques that point back via variantof
 .technique-page__variants {
   margin: 2rem 0 0;
   padding-top: 1.5rem;
   border-top: 2px solid $color-border-subtle;
 }
 
-// One variant's full write-up, inlined below the main technique.
+// one variant's write-up, inlined below the main technique
 .technique-page__variant {
   padding-top: 1.5rem;
   margin: 0 0 1.5rem;
@@ -1212,13 +1235,12 @@ main {
   }
 }
 
-// Generic pill button, used for CTAs on detail pages (download, watch demo)
-// and the catalogue's "suggest a ..." links.
+// generic pill button for ctas
 .btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center; // stays centered even when a flex parent stretches it (e.g. the submit form)
-  gap: 0.5rem; // only matters when a button also carries an icon (e.g. the Discord CTA)
+  justify-content: center; // stays centered even when a flex parent stretches it
+  gap: 0.5rem; // only matters when a button also carries an icon
   text-align: center;
   background: transparent;
   border: 2px solid $color-border;
@@ -1238,7 +1260,7 @@ main {
   }
 }
 
-// ---- Catalogue page chrome (heading + submission CTAs) ------------------
+// catalogue page chrome
 
 .page-header {
   display: flex;
@@ -1254,29 +1276,21 @@ main {
   }
 }
 
-// ---- Homepage ----------------------------------------------------------
+// homepage
 
-// Cancels <main>'s own top padding: the hero needs to sit flush against
-// main's top edge (= the header's bottom edge) for its negative margin-top
-// to land it exactly at the page's y: 0.
+// cancels main's top padding so the hero sits flush at y:0
 .home-page {
   padding-top: 0;
+  // traps .hero's negative z-index (needed so mobile's static header paints above it) so it stays scoped
+  // to .home-page's own children instead of bubbling up to compete against .home-page's own box at the
+  // body level — without this, main's (invisible but still hit-testable) box intercepts every click on hero
+  isolation: isolate;
 }
 
-// Full page width and pulled up by the header's own height so it starts at
-// the very top of the page (y: 0), with the sticky header floating over it —
-// same trick as .page-sticker, just horizontal: break out of <main>'s
-// max-width with a negative-margin/100vw combo. Height is clamped rather
-// than left to its content: tall enough to feel like a banner, capped so
-// the "What's new" section still peeks in at the bottom of the initial
-// viewport as a scroll invitation.
+// full-bleed hero pulled up under the sticky header, height clamped
 .hero {
   position: relative;
-  // Negative, not just lower than the header's: on mobile the header drops
-  // to position: static (see the max-width: 720px block), and a static
-  // element always paints above a positioned sibling regardless of z-index
-  // number — only a negative z-index reliably stays under it in both cases.
-  z-index: -1;
+  z-index: -1; // static header on mobile always paints above positioned siblings otherwise
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1284,13 +1298,10 @@ main {
   margin-left: calc(50% - 50vw);
   margin-top: calc(-1 * var(--header-h));
   padding: calc(var(--header-h) + 2rem) 1.5rem 2rem;
-  height: clamp(460px, 64vh, 660px);
+  min-height: clamp(460px, 64vh, 660px); // a min, not a fixed height: mobile's wrapped button row needs more room
   overflow: hidden;
   text-align: center;
-  // Same diagonal-cut language as .home-section/.site-footer, mirrored onto
-  // the bottom edge instead of the top: it rises left-to-right by the same
-  // 32px cut, so the two shapes read as one continuous zigzag down the page.
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 64px), 0 100%);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 64px), 0 100%); // mirrors .home-section/.site-footer
 }
 
 .hero__video {
@@ -1302,8 +1313,7 @@ main {
   object-fit: cover;
 }
 
-// Darkens the video so the logo/tagline/buttons stay legible regardless of
-// what's playing behind them.
+// darkens the video so text stays legible
 .hero__overlay {
   position: absolute;
   inset: 0;
@@ -1348,8 +1358,7 @@ main {
   min-width: 350px;
 }
 
-// Discord's own brand color instead of the site's yellow accent — the
-// point of this specific button is to be instantly recognizable.
+// discord's own brand color for instant recognition
 .btn--discord {
   border-color: #5865f2;
   color: #5865f2;
@@ -1360,9 +1369,7 @@ main {
   }
 }
 
-// "I've learned this" in /practice — solid from the start rather than
-// outline-then-fill on hover like every other .btn, so the positive action
-// reads as the confirmed, primary one next to "Skip for now".
+// solid from the start, marks it as the confirmed/primary action
 .btn--learned {
   background: $color-border;
   color: #1a1a1a;
@@ -1373,9 +1380,7 @@ main {
   }
 }
 
-// A slanted top edge instead of a flat stacked rectangle, cutting into a
-// subtly tinted panel — a bit more dynamic than a plain divider, without
-// going as far as a full-bleed banner outside the page's content column.
+// slanted top edge instead of a flat divider
 .home-section {
   margin-top: 3rem;
   padding: 3.5rem 2rem 2.5rem;
@@ -1402,7 +1407,7 @@ main {
   margin-top: 3rem;
 }
 
-// ---- Submission forms ----------------------------------------------------
+// submission forms
 
 .submit-form {
   display: flex;
@@ -1424,12 +1429,7 @@ main {
   padding: 0.5rem 0.75rem;
 }
 
-// Reset the browser's default fieldset chrome (border/padding). It's only
-// here so `disabled` can grey out every field at once during submission.
-// display:contents drops its own box so the <label> children keep acting as
-// direct flex items of .submit-form; that also means opacity can't target
-// the fieldset itself (no box left to fade), so it's applied to the
-// children instead.
+// display:contents so `disabled` can dim the fields via their own opacity
 .submit-form__fields {
   display: contents;
   border: 0;
@@ -1461,12 +1461,9 @@ main {
   font-size: 0.85rem;
 }
 
-// ---- Footer --------------------------------------------------------------
+// footer
 
-// Bookends the page with the same diagonal-cut language as the homepage's
-// "What's new" band — .site-footer isn't inside <main>'s max-width, so
-// this reaches the full viewport edge to edge for free, no breakout trick
-// needed.
+// same diagonal-cut language as the homepage band, full-bleed since it's outside main
 .site-footer {
   margin-top: auto;
   padding: 3rem 1.5rem 2.5rem;
@@ -1513,7 +1510,7 @@ main {
   text-decoration: underline;
 }
 
-// Visually hidden from everyone except bots that fill in every field blindly.
+// hidden from real visitors, bots fill every field blindly
 .submit-form__honeypot {
   position: absolute;
   width: 1px;
@@ -1523,17 +1520,14 @@ main {
   white-space: nowrap;
 }
 
-// ---- Misc detail-page/global widgets --------------------------------------
+// misc widgets
 
-// Sits at the end of a detail page's <article>, so it doesn't need its own
-// wrapper — .btn already centers its own text and this just adds a little
-// breathing room above it.
+// spacing for the end of a detail page's article
 .copy-link-btn {
   margin-top: 0.5rem;
 }
 
-// Groups the learned-toggle and copy-link buttons on a skip's detail page
-// into one row instead of each carrying its own top margin.
+// groups learned-toggle + copy-link into one row
 .skip-page__actions {
   display: flex;
   flex-wrap: wrap;
@@ -1545,9 +1539,7 @@ main {
   }
 }
 
-// Fixed bottom-right, hidden until the visitor has scrolled a screenful or
-// so down (see BackToTop.astro). Circular to read clearly as a control
-// rather than more page content.
+// fixed bottom-right, hidden until scrolled past a screenful
 .back-to-top {
   position: fixed;
   right: 1.5rem;
@@ -1564,7 +1556,8 @@ main {
   color: $color-border;
   cursor: pointer;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-  transition: transform 0.15s ease, background-color 0.15s ease;
+  opacity: 1;
+  transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.2s ease;
 
   &:hover {
     background: $color-border;
@@ -1572,31 +1565,26 @@ main {
     transform: translateY(-2px);
   }
 
+  // overrides [hidden]'s display:none so it fades via opacity instead
   &[hidden] {
-    display: none;
+    display: flex;
+    opacity: 0;
+    pointer-events: none;
   }
 }
 
-// ---- Page transitions ------------------------------------------------
+// page transitions
 
-// <ClientRouter> is still active (prefetch-driven SPA navigation, and the
-// astro:before-preparation/astro:page-load events PageLoadingBar.astro
-// hooks into), but its default crossfade is switched off in favor of an
-// instant cut — overriding the animation directly on the browser's View
-// Transition pseudo-elements works regardless of any transition:animate
-// directive (or lack of one) on individual pages.
+// disables the default crossfade in favor of an instant cut
 ::view-transition-old(*),
 ::view-transition-new(*) {
   animation: none !important;
   mix-blend-mode: normal;
 }
 
-// ---- Page transition feedback (see PageLoadingBar.astro) -----------------
+// page transition feedback
 
-// Indeterminate top progress bar: jumps to 80% width over a slow easing
-// curve as soon as a navigation starts (so it always looks like it's still
-// making progress, however long the fetch actually takes), then snaps to
-// 100% and fades out once the new page has swapped in.
+// indeterminate progress bar that eases to 80% then snaps to 100%
 #page-loading-bar {
   position: fixed;
   top: 0;
@@ -1620,30 +1608,16 @@ main {
   opacity: 0;
 }
 
-// Soft "please wait": dims the outgoing page and ignores clicks on it
-// while a navigation is in flight, so a slow transition can't be
-// double-clicked into firing a second one. Header/footer/back-to-top stay
-// interactive on purpose — only the content that's about to be replaced
-// dims.
+// dims the outgoing page and blocks clicks during navigation
 .is-navigating main {
   pointer-events: none;
   opacity: 0.6;
   transition: opacity 0.15s ease;
 }
 
-// ---- Practice mode (see PracticeMode.jsx) ---------------------------------
+// practice mode
 
-.practice__note {
-  color: $color-text-muted;
-  font-size: 0.85rem;
-  max-width: 640px;
-  margin: 0 0 1.5rem;
-}
-
-// <details>, collapsed by default: a multi-column flow would reflow
-// unevenly once one opens (variable height), so this stays a single
-// column and leans on being collapsed to keep ~50 levels manageable
-// instead — same reasoning and look as .route-sheet__picker-level.
+// collapsed <details> per level, keeps ~50 levels manageable
 .practice__level {
   margin-bottom: 0.5rem;
   break-inside: avoid;
@@ -1687,10 +1661,7 @@ main {
   gap: 0.35rem;
 }
 
-// Flat/non-level sort has no level sections to lean on for compression
-// (see .practice__levels below, used when grouped), so it gets its own
-// multi-column flow instead — otherwise a few hundred skips would be one
-// very long single column.
+// flat sort has no level sections, so it multi-columns instead
 .practice__checklist--flat {
   display: block;
   columns: 280px;
@@ -1716,9 +1687,7 @@ main {
   }
 }
 
-// Wraps only the checkbox (not the title/meta) so clicking the row's link
-// doesn't also toggle it, and vice versa — the two are separate controls
-// sharing one row, not one big label.
+// wraps only the checkbox so it toggles independently of the row link
 .practice__checklist-check {
   display: flex;
   align-items: center;
@@ -1754,8 +1723,9 @@ main {
   flex-shrink: 0;
 }
 
-// ---- Route sheet (see RouteSheet.jsx) -------------------------------------
+// route sheet
 
+.practice__note,
 .route-sheet__note {
   color: $color-text-muted;
   font-size: 0.85rem;
@@ -1763,9 +1733,7 @@ main {
   margin: 0 0 1.5rem;
 }
 
-// Two panes side by side: pick skips on the left, watch "My route" build
-// up live on the right, instead of scrolling all the way down to see it.
-// Stacks on narrower screens, picker first.
+// picker left, live "my route" summary right, stacks on narrow screens
 .route-sheet__layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1789,9 +1757,7 @@ main {
   background: $color-card-bg;
   border: 2px solid $color-border-subtle;
   border-radius: $radius;
-  // Stays in view while scrolling the picker on the left, like a cart
-  // panel. 6.5rem clears the sticky header's own height plus some air.
-  position: sticky;
+  position: sticky; // stays in view like a cart panel while scrolling the picker
   top: 6.5rem;
 }
 
@@ -1801,8 +1767,7 @@ main {
   }
 }
 
-// <details>, collapsed by default: with a big catalogue, showing every
-// level's full pill list at once would be a wall of buttons.
+// collapsed <details>, avoids a wall of pills
 .route-sheet__picker-level {
   margin-bottom: 0.5rem;
 
@@ -1856,9 +1821,7 @@ main {
   font-size: 0.9rem;
 }
 
-// Single column, deliberately: this is a run in order, not a browsable
-// list — splitting it into columns would break the top-to-bottom sequence
-// a route sheet needs to read in.
+// single column: a route is read in order, not browsed
 .route-sheet__list {
   list-style: none;
   margin: 0;
@@ -1901,4 +1864,3 @@ main {
   gap: 0.15rem;
   color: $color-border;
 }
-

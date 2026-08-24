@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { isRecent, youtubeId } from '../lib/format.js';
+import { useTechniques } from '../lib/useContent.js';
+import CatalogStatus from './CatalogStatus.jsx';
 import { Card, SortSelect } from './CatalogUI.jsx';
+import SkeletonGrid from './SkeletonCard.jsx';
 
 const SORTS = {
   name: (a, b) => a.technique.title.localeCompare(b.technique.title, 'fr', { numeric: true }),
@@ -12,13 +15,17 @@ const SORT_OPTIONS = [
   { value: 'recent', label: 'Most recent' },
 ];
 
-/**
- * Same client-side search/filter pattern as Catalog.jsx (skips), over the
- * technique catalogue instead. See Catalog.jsx for the shared reasoning.
- */
-export default function TechniqueCatalog({ techniques }) {
+// same client-side search/filter pattern as catalog.jsx, over the technique catalogue
+export default function TechniqueCatalog() {
+  const { data: allTechniques, loading, error } = useTechniques();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('name');
+
+  // variants have their own page, linked from their parent's — not listed as their own card
+  const techniques = useMemo(
+    () => (allTechniques ? allTechniques.filter((t) => !t.variantOfId) : []),
+    [allTechniques]
+  );
 
   const matched = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -26,13 +33,10 @@ export default function TechniqueCatalog({ techniques }) {
 
     return techniques
       .map((t) => {
-        // Search the technique's own text first...
         if (`${t.title} ${t.summary}`.toLowerCase().includes(q)) {
           return { technique: t, matchedVariant: null };
         }
-        // ...then each variant's, so a word that only appears in a variant
-        // still surfaces the parent technique (variants don't get their own
-        // grid entry).
+        // then each variant's, so a word only in a variant still surfaces the parent technique
         const matchedVariant = t.variants.find((v) =>
           `${v.title} ${v.summary}`.toLowerCase().includes(q)
         );
@@ -47,6 +51,22 @@ export default function TechniqueCatalog({ techniques }) {
 
   function reset() {
     setSearch('');
+  }
+
+  if (loading) {
+    return (
+      <div className="catalog catalog--techniques">
+        <SkeletonGrid />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="catalog catalog--techniques">
+        <CatalogStatus error={error} />
+      </div>
+    );
   }
 
   return (
@@ -94,7 +114,7 @@ export default function TechniqueCatalog({ techniques }) {
   );
 }
 
-/** A single catalogue card, using the linked video's YouTube thumbnail as cover. */
+// a single catalogue card, using the linked video's youtube thumbnail as cover
 function TechniqueCard({ technique: t, matchedVariant }) {
   const videoId = youtubeId(t.youtubeLink);
 
@@ -109,8 +129,7 @@ function TechniqueCard({ technique: t, matchedVariant }) {
           label: 'Variants',
           value: t.variants.length,
         },
-        // The search only matched inside a variant, not the technique's own
-        // text, so say which one is why this card is showing up.
+        // says which variant matched, when the technique's own text didn't
         matchedVariant && {
           label: 'Matches variant',
           value: matchedVariant.title,

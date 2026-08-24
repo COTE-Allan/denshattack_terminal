@@ -1,0 +1,13 @@
+---
+import Base from '../../layouts/Base.astro';
+import BackLink from '../../components/BackLink.astro';
+import StickerDetail from '../../components/StickerDetail.jsx';
+---
+
+{/* one shell for every sticker: apache rewrites /stickers/<slug>/ here, the slug is read client-side */}
+<Base title="Sticker details" description="Sticker details.">
+  <main class="sticker-page">
+    <BackLink href="/stickers/" label="Back to stickers" />
+    <StickerDetail client:load />
+  </main>
+</Base>

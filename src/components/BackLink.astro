@@ -12,10 +12,7 @@ const { href, label } = Astro.props;
 </p>
 
 <script>
-  // A skip linked from /practice or /route-sheet carries ?from=... so this
-  // link can point back to whichever list actually sent the visitor here,
-  // instead of always the generic catalogue — this is a static site, so
-  // reading that context has to happen client-side, from the real URL.
+  // ?from=... (static site, read client-side) lets the link point back to whichever list sent the visitor here
   const FROM = {
     practice: { href: '/practice', label: 'Back to practice checklist' },
     'route-sheet': { href: '/route-sheet', label: 'Back to route sheet' },
@@ -32,7 +29,6 @@ const { href, label } = Astro.props;
     });
   }
 
-  // Fires on the initial load and after every view transition, so this
-  // keeps working without needing to re-run anything manually.
+  // fires on initial load and after every view transition
   document.addEventListener('astro:page-load', applyFromParam);
 </script>
