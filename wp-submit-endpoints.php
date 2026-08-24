@@ -16,8 +16,15 @@ add_action( 'rest_api_init', function () {
 	} );
 }, 15 );
 
+// simple killswitch: flip to true to re-enable the per-ip limit
+define( 'DENSHA_RATE_LIMIT_ENABLED', false );
+
 // per-ip rate limit: 5 submissions/hour per endpoint
 function densha_rate_limit_ok( $key ) {
+	if ( ! DENSHA_RATE_LIMIT_ENABLED ) {
+		return true;
+	}
+
 	// dev bypass for localhost — remove before going live, a spoofed origin header could skip the limit
 	$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 	if ( strpos( $origin, 'http://localhost:' ) === 0 ) {
@@ -156,6 +163,21 @@ add_action( 'rest_api_init', function () {
 			update_field( 'youtube_link', esc_url_raw( $data['youtubeLink'] ?? '' ), $post_id );
 			update_field( 'found_by', sanitize_text_field( $data['foundBy'] ?? '' ), $post_id );
 			update_field( 'description', sanitize_textarea_field( $data['description'] ?? '' ), $post_id );
+
+			// technique ids picked in the form; optional relationship field, fine to save empty
+			$technique_ids = array_values( array_filter(
+				array_map( 'intval', (array) ( $data['techniqueUsed'] ?? array() ) ),
+				function ( $id ) {
+					return $id > 0 && get_post_type( $id ) === 'technique';
+				}
+			) );
+			update_field( 'techniques_used', $technique_ids, $post_id );
+
+			// "variant of" submits the parent skip's post id (dropdown value), name is just the visible label
+			$variant_of_id = (int) ( $data['variantOf'] ?? 0 );
+			if ( $variant_of_id > 0 && get_post_type( $variant_of_id ) === 'skip' ) {
+				update_field( 'variant_of', $variant_of_id, $post_id );
+			}
 
 			return new WP_REST_Response( array( 'ok' => true ), 200 );
 		},

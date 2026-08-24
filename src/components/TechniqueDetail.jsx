@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { youtubeId, youtubeStart } from '../lib/format.js';
-import { useTechniques } from '../lib/useContent.js';
+import { useSkips, useTechniques } from '../lib/useContent.js';
 import CatalogStatus from './CatalogStatus.jsx';
 import { CopyLinkButton } from './DetailWidgets.jsx';
 
@@ -41,11 +41,18 @@ function VideoBlock({ title, youtubeLink }) {
 
 export default function TechniqueDetail() {
   const { data: techniques, loading, error } = useTechniques();
+  const { data: skips } = useSkips();
 
   const technique = useMemo(() => {
     if (!techniques) return null;
     return techniques.find((t) => t.slug === slugFromPath()) ?? null;
   }, [techniques]);
+
+  // reverse lookup: which skips (base or variant) reference this technique in their own techniqueUsed list
+  const usedInSkips = useMemo(() => {
+    if (!skips || !technique) return [];
+    return skips.filter((s) => s.techniqueUsed.some((tu) => tu.id === technique.id));
+  }, [skips, technique]);
 
   useEffect(() => {
     if (technique) document.title = `Denshattack Station - ${technique.title}`;
@@ -92,6 +99,23 @@ export default function TechniqueDetail() {
               <VideoBlock title={v.title} youtubeLink={v.youtubeLink} />
             </article>
           ))}
+        </section>
+      )}
+
+      {/* at the bottom, wrapped as pills: a well-used technique can turn up in a lot of skips */}
+      {usedInSkips.length > 0 && (
+        <section className="technique-page__used-in">
+          <h2>Used in</h2>
+
+          <ul className="pill-list">
+            {usedInSkips.map((s) => (
+              <li key={s.id}>
+                <a className="pill" href={`/skips/${s.slug}/?from=technique:${t.slug}`}>
+                  {s.title}
+                </a>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </>

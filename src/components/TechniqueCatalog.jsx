@@ -125,14 +125,11 @@ function TechniqueCard({ technique: t, matchedVariant }) {
       title={t.title}
       summary={matchedVariant ? matchedVariant.summary : t.summary}
       meta={[
-        t.variants.length > 0 && {
+        // always shown (not just when there are variants) so every card reserves the same row and stays the same height;
+        // when a variant is what matched the search, its name replaces the count right here instead of adding a row
+        {
           label: 'Variants',
-          value: t.variants.length,
-        },
-        // says which variant matched, when the technique's own text didn't
-        matchedVariant && {
-          label: 'Matches variant',
-          value: matchedVariant.title,
+          value: matchedVariant ? matchedVariant.title : t.variants.length > 0 ? t.variants.length : '–',
         },
       ]}
       badge={isRecent(t.modified) ? 'New!' : null}

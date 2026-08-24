@@ -1,18 +1,10 @@
 ---
 import Base from '../../layouts/Base.astro';
 import BackLink from '../../components/BackLink.astro';
-import SubmitForm from '../../components/SubmitForm.jsx';
+import StickerSubmitForm from '../../components/StickerSubmitForm.jsx';
 import { restBase } from '../../lib/wp.js';
 
 const endpoint = `${restBase()}/denshattack/v1/submit-sticker`;
-
-const fields = [
-  { name: 'name', label: 'Sticker name', required: true, maxLength: 120 },
-  { name: 'artist', label: 'Artist', required: true, maxLength: 80 },
-  { name: 'tags', label: 'Tags (comma-separated)', maxLength: 200 },
-  { name: 'stickerImage', label: 'Sticker image', type: 'file', required: true },
-  { name: 'screenshot', label: 'In-game screenshot', type: 'file' },
-];
 ---
 
 <Base title="Add a sticker" description="Submit a new sticker for review.">
@@ -25,6 +17,6 @@ const fields = [
       the catalogue once it's reviewed.
     </p>
 
-    <SubmitForm client:load endpoint={endpoint} submitLabel="Add sticker" fields={fields} />
+    <StickerSubmitForm client:load endpoint={endpoint} />
   </main>
 </Base>

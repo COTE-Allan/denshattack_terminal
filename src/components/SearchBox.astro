@@ -33,13 +33,13 @@ const {
 
 <script>
   import { TYPE_LABELS } from '../lib/format.js';
-  import { getAllContent } from '../lib/wp.js';
+  import { getSearchIndex } from '../lib/wp.js';
 
   const MAX_QUICK_RESULTS = 6;
 
-  // getAllContent() is memoized in wp.js, so this only hits wordpress once per page even with header + hero search boxes both mounted
+  // getSkips/getTechniques/getStickers are memoized in wp.js, so this only hits wordpress once per page even with header + hero search boxes both mounted
   function loadSearchIndex() {
-    return getAllContent();
+    return getSearchIndex();
   }
 
   function escapeHtml(text) {
@@ -95,7 +95,7 @@ const {
     if (input.value.trim().toLowerCase() !== q) return; // bail if the input changed while the fetch was in flight
 
     const matches = items
-      .filter((item) => `${item.title} ${item.summary}`.toLowerCase().includes(q))
+      .filter((item) => item.searchText.toLowerCase().includes(q))
       .slice(0, MAX_QUICK_RESULTS);
     renderResults(container, input, matches);
   });

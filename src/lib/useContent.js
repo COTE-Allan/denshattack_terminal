@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getAllContent, getSkips, getStickers, getTechniques } from './wp.js';
+import { getAllContent, getSearchIndex, getSkips, getStickers, getTechniques } from './wp.js';
 
 // shared loading/error wrapper around wp.js's memoized fetchers, used by every catalogue/detail island
 function useAsync(fetcher) {
@@ -13,6 +13,7 @@ function useAsync(fetcher) {
         if (!cancelled) setState({ data, loading: false, error: null });
       })
       .catch((error) => {
+        console.error(error); // the UI only shows a generic message, so the real cause has to come from here
         if (!cancelled) setState({ data: null, loading: false, error });
       });
 
@@ -38,4 +39,8 @@ export function useTechniques() {
 
 export function useAllContent() {
   return useAsync(getAllContent);
+}
+
+export function useSearchIndex() {
+  return useAsync(getSearchIndex);
 }

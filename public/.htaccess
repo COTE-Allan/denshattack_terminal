@@ -1,3 +1,17 @@
+# build output is hashed (e.g. TechniqueSubmitForm.Cx8vnQ4x.js) so it's safe to cache forever —
+# a content change gets a new filename, it never overwrites the old one in place. html pages must
+# stay revalidated, or a visitor can be served a stale page that still points at a hashed asset a
+# newer deploy already replaced, which 404s (served as text/html) and fails to load as a module.
+<IfModule mod_headers.c>
+  <FilesMatch "\.[A-Za-z0-9_-]{6,}\.(js|mjs|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
 # serves the same static "view" shell for every skip/sticker/technique slug (astro no longer
 # pre-builds one html file per item — the shell fetches wordpress client-side once loaded)
 RewriteEngine On

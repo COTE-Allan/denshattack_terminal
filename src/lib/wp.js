@@ -38,6 +38,17 @@ async function query(document, variables = {}) {
   return json.data;
 }
 
+// shared between SKIPS and its fallback below, so the two stay in sync
+const SKIP_DATA_FIELDS = `
+  name
+  description
+  level
+  difficulty
+  timesave
+  youtubeLink
+  foundBy
+`;
+
 const SKIPS = /* GraphQL */ `
   query AllSkips {
     skips(first: 500) {
@@ -48,13 +59,48 @@ const SKIPS = /* GraphQL */ `
         title
         modified
         skipData {
-          name
-          description
-          level
-          difficulty
-          timesave
-          youtubeLink
-          foundBy
+          ${SKIP_DATA_FIELDS}
+          variantOf {
+            nodes {
+              ... on Skip {
+                id
+                slug
+                skipData {
+                  name
+                }
+              }
+            }
+          }
+          techniqueUsed: techniquesUsed {
+            nodes {
+              ... on Technique {
+                id
+                slug
+                techniqueData {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+// used if "techniquesUsed" isn't (yet) recognised by the live schema — an unknown field fails graphql validation
+// for the whole query, so the entire catalogue would otherwise go down over one relationship field
+const SKIPS_FALLBACK = /* GraphQL */ `
+  query AllSkips {
+    skips(first: 500) {
+      nodes {
+        id
+        databaseId
+        slug
+        title
+        modified
+        skipData {
+          ${SKIP_DATA_FIELDS}
         }
       }
     }
@@ -171,9 +217,16 @@ export function getSkips() {
   return (skipsPromise ??= fetchSkips());
 }
 
-// flattens the graphql shape into plain objects the react island can filter without digging into nested fields
+// flattens the graphql shape into plain objects the react island can filter without digging into nested fields; each
+// skip also collects the other skips that point back at it via variantof (second pass, not knowable from its own node)
 async function fetchSkips() {
-  const data = await query(SKIPS);
+  let data;
+  try {
+    data = await query(SKIPS);
+  } catch (err) {
+    console.error('Skips query with techniquesUsed failed, retrying without it:', err);
+    data = await query(SKIPS_FALLBACK);
+  }
 
   const skips = (data.skips?.nodes ?? []).map((n) => {
     const d = n.skipData ?? {};
@@ -181,9 +234,11 @@ async function fetchSkips() {
     const title = (d.name || n.title || 'Untitled').trim(); // acf name wins over the wordpress post title
     const description = toHtml(d.description);
     const text = plain(d.description);
+    const parent = d.variantOf?.nodes?.[0]; // exposed as a connection, but the acf field only ever holds one post
 
     return {
       id: n.id,
+      databaseId: n.databaseId, // plain wordpress post id, needed for the "variant of" field on submission
       slug: n.slug || String(n.databaseId), // fall back to the numeric id if there's no usable slug
       title,
       description,
@@ -194,9 +249,25 @@ async function fetchSkips() {
       timesave: d.timesave == null || d.timesave === '' ? null : Number(d.timesave),
       youtubeLink: d.youtubeLink || '',
       foundBy: (d.foundBy || '').trim(),
+      techniqueUsed: (d.techniqueUsed?.nodes ?? []).map((t) => ({
+        id: t.id,
+        slug: t.slug || '',
+        title: (t.techniqueData?.name || '').trim(),
+      })),
+      variantOfId: parent?.id || null,
+      variantOfSlug: parent?.slug || '',
+      variantOfTitle: (parent?.skipData?.name || '').trim(),
+      variants: [], // filled in below
       modified: n.modified,
     };
   });
+
+  const byId = new Map(skips.map((s) => [s.id, s]));
+  for (const s of skips) {
+    if (!s.variantOfId) continue;
+    const parent = byId.get(s.variantOfId);
+    if (parent) parent.variants.push(s); // full data, so the parent's page can render it inline
+  }
 
   // group by level, then alphabetically inside each level
   return skips.sort(
@@ -326,7 +397,27 @@ function youtubeThumb(url) {
   return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : '';
 }
 
-// every skip/technique/sticker flattened into one shape, for search and "what's new"
+// most recent of a skip's own modified date and its variants' — a new variant should surface the parent as recent too
+function latestModified(s) {
+  return [s.modified, ...s.variants.map((v) => v.modified)].reduce((latest, d) =>
+    new Date(d) > new Date(latest) ? d : latest
+  );
+}
+
+function stickerItem(s) {
+  return {
+    type: 'sticker',
+    href: `/stickers/${s.slug}/`,
+    title: s.title,
+    summary: s.artist ? `By ${s.artist}` : '',
+    mediaSrc: s.screenshot || s.image || '',
+    modified: s.modified,
+    searchText: `${s.title} ${s.artist} ${s.tags.join(' ')}`,
+  };
+}
+
+// every skip/technique/sticker flattened into one shape, for "what's new" — each variant is its own recent-activity
+// entry here (see getSearchIndex() below for the different, search-only shape: variants merged into their parent)
 export async function getAllContent() {
   const [skips, techniques, stickers] = await Promise.all([
     getSkips(),
@@ -334,13 +425,14 @@ export async function getAllContent() {
     getStickers(),
   ]);
 
+  // unlike technique variants, skip variants get their own entry here too — just with the parent bumped to match
   const skipItems = skips.map((s) => ({
     type: 'skip',
     href: `/skips/${s.slug}/`,
     title: s.title,
     summary: s.summary,
     mediaSrc: youtubeThumb(s.youtubeLink),
-    modified: s.modified,
+    modified: latestModified(s),
   }));
 
   const techniqueItems = techniques
@@ -354,14 +446,48 @@ export async function getAllContent() {
       modified: t.modified,
     }));
 
-  const stickerItems = stickers.map((s) => ({
-    type: 'sticker',
-    href: `/stickers/${s.slug}/`,
-    title: s.title,
-    summary: s.artist ? `By ${s.artist}` : '',
-    mediaSrc: s.screenshot || s.image || '',
-    modified: s.modified,
-  }));
+  return [...skipItems, ...techniqueItems, ...stickers.map(stickerItem)];
+}
 
-  return [...skipItems, ...techniqueItems, ...stickerItems];
+// joins a base item's own searchable text with its variants' — so typing a variant's name still matches, without the
+// variant needing its own entry (search always resolves to the base item; the parent's own page shows the variant)
+function withVariantsSearchText(title, summary, variants) {
+  return [title, summary, ...variants.flatMap((v) => [v.title, v.summary])].filter(Boolean).join(' ');
+}
+
+// every skip/technique flattened for search only: unlike getAllContent(), variants are never their own entry — a
+// match on a variant's name/description still surfaces (and links to) its base skip/technique, matching how the
+// technique catalogue's own search already behaved before this was split out
+export async function getSearchIndex() {
+  const [skips, techniques, stickers] = await Promise.all([
+    getSkips(),
+    getTechniques(),
+    getStickers(),
+  ]);
+
+  const skipItems = skips
+    .filter((s) => !s.variantOfId)
+    .map((s) => ({
+      type: 'skip',
+      href: `/skips/${s.slug}/`,
+      title: s.title,
+      summary: s.summary,
+      mediaSrc: youtubeThumb(s.youtubeLink),
+      modified: latestModified(s),
+      searchText: withVariantsSearchText(s.title, s.summary, s.variants),
+    }));
+
+  const techniqueItems = techniques
+    .filter((t) => !t.variantOfId)
+    .map((t) => ({
+      type: 'technique',
+      href: `/techniques/${t.slug}/`,
+      title: t.title,
+      summary: t.summary,
+      mediaSrc: youtubeThumb(t.youtubeLink),
+      modified: t.modified,
+      searchText: withVariantsSearchText(t.title, t.summary, t.variants),
+    }));
+
+  return [...skipItems, ...techniqueItems, ...stickers.map(stickerItem)];
 }

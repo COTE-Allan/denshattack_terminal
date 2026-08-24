@@ -19,7 +19,18 @@ const { href, label } = Astro.props;
   };
 
   function applyFromParam() {
-    const match = FROM[new URLSearchParams(window.location.search).get('from')];
+    const raw = new URLSearchParams(window.location.search).get('from') || '';
+
+    // "skip:<slug>" / "technique:<slug>" are dynamic (one per item), unlike the static routes above — parsed instead of looked up
+    let match = FROM[raw];
+    if (!match && raw.startsWith('skip:')) {
+      const slug = raw.slice('skip:'.length);
+      if (slug) match = { href: `/skips/${slug}/`, label: 'Back to skip' };
+    }
+    if (!match && raw.startsWith('technique:')) {
+      const slug = raw.slice('technique:'.length);
+      if (slug) match = { href: `/techniques/${slug}/`, label: 'Back to technique' };
+    }
     if (!match) return;
 
     document.querySelectorAll('[data-backlink]').forEach((link) => {

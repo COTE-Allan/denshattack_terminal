@@ -112,6 +112,9 @@ h3 {
 }
 
 main {
+  // explicit instead of relying on flex stretch from body's cross axis — that leaves a gap where content
+  // (e.g. a placeholder grid) can be laid out against a not-yet-settled width, collapsing auto-fill columns
+  width: 100%;
   max-width: $max-width;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
@@ -1026,6 +1029,9 @@ main {
   font-size: 1.05rem;
   margin: 0 0 0.5rem;
   color: $color-text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card__summary {
@@ -1085,6 +1091,13 @@ main {
   svg {
     flex-shrink: 0;
   }
+}
+
+// the running total next to a variant's own "+Ns" time save
+.skip-page__timesave-total {
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  letter-spacing: normal;
 }
 
 // detail pages (skip, sticker, ...), shared .detail__* classes
@@ -1220,8 +1233,51 @@ main {
   border-top: 2px solid $color-border-subtle;
 }
 
+// reverse lookup: skips whose techniqueUsed references this technique. lives at the bottom of the page (not near
+// the title, like variant-of) and uses the wrapping pill-list, since a well-used technique can list many of these
+.technique-page__used-in {
+  margin: 2rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 2px solid $color-border-subtle;
+
+  .pill-list {
+    margin-bottom: 0;
+  }
+}
+
 // one variant's write-up, inlined below the main technique
 .technique-page__variant {
+  padding-top: 1.5rem;
+  margin: 0 0 1.5rem;
+  border-top: 2px solid $color-border-subtle;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  h3 {
+    margin: 0 0 0.75rem;
+  }
+}
+
+// same "variant of" pattern as techniques, above, but for skips
+.skip-page__variant-of {
+  color: $color-text-muted;
+  margin: -1rem 0 1.75rem;
+
+  a {
+    color: $color-border;
+    text-decoration: underline;
+  }
+}
+
+.skip-page__variants {
+  margin: 2rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 2px solid $color-border-subtle;
+}
+
+.skip-page__variant {
   padding-top: 1.5rem;
   margin: 0 0 1.5rem;
   border-top: 2px solid $color-border-subtle;
@@ -1427,6 +1483,24 @@ main {
 .submit-form__file {
   border-radius: $radius; // native file-picker chrome doesn't suit a pill
   padding: 0.5rem 0.75rem;
+}
+
+.submit-form__multiselect {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+// capped and scrollable so a long options list (e.g. every technique) doesn't take over the form
+.submit-form__multiselect-pills {
+  max-height: 11rem;
+  overflow-y: auto;
+  margin: 0;
+}
+
+.submit-form__multiselect-empty {
+  color: $color-text-muted;
+  font-size: 0.85rem;
 }
 
 // display:contents so `disabled` can dim the fields via their own opacity

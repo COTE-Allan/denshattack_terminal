@@ -42,13 +42,19 @@ const SORT_OPTIONS = [
 
 // fetches the whole catalogue client-side, so the deployed site never needs a rebuild for new wordpress entries
 export default function Catalog() {
-  const { data: skips, loading, error } = useSkips();
+  const { data: allSkips, loading, error } = useSkips();
   const [search, setSearch] = useState('');
   const [level, setLevel] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const [timesave, setTimesave] = useState('');
   const [sort, setSort] = useState('level');
   const { learned, toggle: toggleLearned } = useLearnedSkips();
+
+  // variants have their own page, linked from their parent's — not listed as their own card
+  const skips = useMemo(
+    () => (allSkips ? allSkips.filter((s) => !s.variantOfId) : []),
+    [allSkips]
+  );
 
   const facets = useMemo(
     () => ({
@@ -58,22 +64,37 @@ export default function Catalog() {
     [skips]
   );
 
-  const filtered = useMemo(() => {
-    if (!skips) return [];
+  // a search term matching only a variant's title/summary still surfaces its base skip (the variant has no card of
+  // its own), same as the technique catalogue does for technique variants
+  const matched = useMemo(() => {
     const q = search.trim().toLowerCase();
+    if (!q) return skips.map((s) => ({ skip: s, matchedVariant: null }));
 
-    return skips.filter((s) => {
-      if (q && !`${s.title} ${s.summary}`.toLowerCase().includes(q)) return false;
+    return skips
+      .map((s) => {
+        if (`${s.title} ${s.summary}`.toLowerCase().includes(q)) {
+          return { skip: s, matchedVariant: null };
+        }
+        const matchedVariant = s.variants.find((v) =>
+          `${v.title} ${v.summary}`.toLowerCase().includes(q)
+        );
+        return matchedVariant ? { skip: s, matchedVariant } : null;
+      })
+      .filter(Boolean);
+  }, [skips, search]);
+
+  const filtered = useMemo(() => {
+    return matched.filter(({ skip: s }) => {
       if (level && s.level !== level) return false;
       if (difficulty && s.difficulty !== difficulty) return false;
       if (timesave && String(timeSaveTier(s.timesave)?.watches ?? '') !== timesave)
         return false;
       return true;
     });
-  }, [skips, search, level, difficulty, timesave]);
+  }, [matched, level, difficulty, timesave]);
 
   const results = useMemo(
-    () => [...filtered].sort(SORTS[sort]),
+    () => [...filtered].sort((a, b) => SORTS[sort](a.skip, b.skip)),
     [filtered, sort]
   );
 
@@ -186,10 +207,11 @@ export default function Catalog() {
         </p>
       ) : (
         <ul className="catalog__list">
-          {results.map((s) => (
+          {results.map(({ skip: s, matchedVariant }) => (
             <SkipCard
               key={s.id}
               skip={s}
+              matchedVariant={matchedVariant}
               learned={learned.has(s.id)}
               onToggleLearned={() => toggleLearned(s.id)}
             />
@@ -200,8 +222,9 @@ export default function Catalog() {
   );
 }
 
-// builds the meta list for a skip card/detail: shared shape for the <card>
-function skipMeta(s) {
+// builds the meta list for a skip card/detail: shared shape for the <card>. `matchedVariant` is only passed from
+// the catalogue, when a search term matched a variant instead of the skip itself
+function skipMeta(s, matchedVariant) {
   const difficultyCount = difficultyStarCount(s.difficulty);
   const watchCount = timeSaveWatchCount(s.timesave);
 
@@ -229,11 +252,16 @@ function skipMeta(s) {
       className: 'card__timesave',
       attrs: { title: timeSaveTier(s.timesave)?.label },
     },
+    // when a variant is what matched the search, its name replaces the count right here instead of adding a row
+    {
+      label: 'Variants',
+      value: matchedVariant ? matchedVariant.title : s.variants.length > 0 ? s.variants.length : '–',
+    },
   ];
 }
 
 // a single catalogue card, using the linked video's youtube thumbnail as cover
-function SkipCard({ skip: s, learned, onToggleLearned }) {
+function SkipCard({ skip: s, matchedVariant, learned, onToggleLearned }) {
   const videoId = youtubeId(s.youtubeLink);
 
   return (
@@ -241,8 +269,8 @@ function SkipCard({ skip: s, learned, onToggleLearned }) {
       href={`/skips/${s.slug}/`}
       media={videoId ? { src: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` } : null}
       title={s.title}
-      summary={s.summary}
-      meta={skipMeta(s)}
+      summary={matchedVariant ? matchedVariant.summary : s.summary}
+      meta={skipMeta(s, matchedVariant)}
       badge={isRecent(s.modified) ? 'New!' : null}
       learned={learned}
       onToggleLearned={onToggleLearned}

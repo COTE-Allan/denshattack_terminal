@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { TYPE_LABELS } from '../lib/format.js';
-import { useAllContent } from '../lib/useContent.js';
+import { useSearchIndex } from '../lib/useContent.js';
 import CatalogStatus from './CatalogStatus.jsx';
 import { Card } from './CatalogUI.jsx';
 import SkeletonGrid from './SkeletonCard.jsx';
 
 // site-wide search over every skip/technique/sticker, fetched client-side so it's always current
 export default function SearchResults() {
-  const { data: items, loading, error } = useAllContent();
+  const { data: items, loading, error } = useSearchIndex();
   const [search, setSearch] = useState('');
 
   // static site: ?q= can only be read client-side after mount, so start from '' to avoid a hydration mismatch
@@ -19,7 +19,7 @@ export default function SearchResults() {
   const results = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q || !items) return [];
-    return items.filter((i) => `${i.title} ${i.summary}`.toLowerCase().includes(q));
+    return items.filter((i) => i.searchText.toLowerCase().includes(q));
   }, [items, search]);
 
   return (

@@ -2,10 +2,56 @@ import { useEffect, useState } from 'react';
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5mb, matches the server-side limit
 
+// pill-toggle picker (same pattern as RouteSheet's skip picker), with a filter box once there's enough options to need one
+function PillMultiSelect({ value, options, onChange }) {
+  const [search, setSearch] = useState('');
+
+  const filtered = search.trim()
+    ? options.filter((o) => o.label.toLowerCase().includes(search.trim().toLowerCase()))
+    : options;
+
+  function toggle(v) {
+    onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  }
+
+  return (
+    <div className="submit-form__multiselect">
+      {options.length > 8 && (
+        <input
+          className="filter__input"
+          type="search"
+          placeholder="Filter…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      )}
+      <ul className="pill-list submit-form__multiselect-pills">
+        {filtered.length === 0 && <li className="submit-form__multiselect-empty">No match</li>}
+        {filtered.map((o) => (
+          <li key={o.value}>
+            <button
+              type="button"
+              className={
+                value.includes(o.value) ? 'pill pill--compact pill--active' : 'pill pill--compact'
+              }
+              aria-pressed={value.includes(o.value)}
+              onClick={() => toggle(o.value)}
+            >
+              {o.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // generic public submission form; posts multipart to a wordpress rest endpoint that creates a pending post for review
 export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' }) {
   const [values, setValues] = useState(() =>
-    Object.fromEntries(fields.map((f) => [f.name, f.type === 'file' ? null : '']))
+    Object.fromEntries(
+      fields.map((f) => [f.name, f.type === 'file' ? null : f.type === 'multiselect' ? [] : ''])
+    )
   );
   const [honeypot, setHoneypot] = useState('');
   const [status, setStatus] = useState('idle'); // idle | sending | success | error
@@ -49,7 +95,12 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
     try {
       const body = new FormData();
       for (const [name, value] of Object.entries(values)) {
-        if (value != null && value !== '') body.append(name, value);
+        if (Array.isArray(value)) {
+          // php collects repeated `name[]` fields into an array on the server side
+          for (const v of value) body.append(`${name}[]`, v);
+        } else if (value != null && value !== '') {
+          body.append(name, value);
+        }
       }
 
       // no content-type header: the browser sets the multipart boundary itself
@@ -69,8 +120,11 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
   return (
     <form className="submit-form" onSubmit={handleSubmit} aria-busy={status === 'sending'}>
       <fieldset className="submit-form__fields" disabled={status === 'sending'}>
-      {fields.map((f) => (
-        <label key={f.name} className="filter submit-form__field">
+      {fields.map((f) => {
+        // the multiselect holds several interactive controls, so it can't live inside a single <label> like the others
+        const Wrapper = f.type === 'multiselect' ? 'div' : 'label';
+        return (
+        <Wrapper key={f.name} className="filter submit-form__field">
           <span className="filter__label">
             {f.label}
             {f.required && ' *'}
@@ -102,6 +156,12 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
                 );
               })}
             </select>
+          ) : f.type === 'multiselect' ? (
+            <PillMultiSelect
+              value={values[f.name]}
+              options={f.options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o))}
+              onChange={(v) => update(f.name, v)}
+            />
           ) : f.type === 'file' ? (
             <input
               className="filter__input submit-form__file"
@@ -111,17 +171,29 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
               required={f.required}
             />
           ) : (
-            <input
-              className="filter__input"
-              type={f.type || 'text'}
-              value={values[f.name]}
-              onChange={(e) => update(f.name, e.target.value)}
-              required={f.required}
-              maxLength={f.maxLength}
-            />
+            <>
+              <input
+                className="filter__input"
+                type={f.type || 'text'}
+                list={f.suggestions ? `${f.name}-suggestions` : undefined}
+                value={values[f.name]}
+                onChange={(e) => update(f.name, e.target.value)}
+                required={f.required}
+                maxLength={f.maxLength}
+              />
+              {/* native datalist: still a free-text field, just nudges toward names already used elsewhere */}
+              {f.suggestions && (
+                <datalist id={`${f.name}-suggestions`}>
+                  {f.suggestions.map((s) => (
+                    <option key={s} value={s} />
+                  ))}
+                </datalist>
+              )}
+            </>
           )}
-        </label>
-      ))}
+        </Wrapper>
+        );
+      })}
 
       {/* hidden from real visitors, only bots that fill every field find it */}
       <label className="submit-form__honeypot" aria-hidden="true">
