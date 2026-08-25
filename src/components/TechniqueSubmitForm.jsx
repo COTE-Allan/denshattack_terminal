@@ -20,7 +20,7 @@ export default function TechniqueSubmitForm({ endpoint }) {
       options: baseTechniques.map((t) => ({ value: String(t.databaseId), label: t.title })),
     },
     { name: 'youtubeLink', label: 'YouTube link', type: 'url', required: true },
-    { name: 'description', label: 'Description', type: 'textarea', maxLength: 2000 },
+    { name: 'description', label: 'Description', type: 'textarea', required: true, maxLength: 2000 },
   ];
 
   return <SubmitForm endpoint={endpoint} submitLabel="Add technique" fields={fields} />;

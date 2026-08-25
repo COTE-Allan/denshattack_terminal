@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5mb, matches the server-side limit
+const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15mb, matches the server-side limit
 
 // pill-toggle picker (same pattern as RouteSheet's skip picker), with a filter box once there's enough options to need one
 function PillMultiSelect({ value, options, onChange }) {
@@ -50,7 +50,10 @@ function PillMultiSelect({ value, options, onChange }) {
 export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' }) {
   const [values, setValues] = useState(() =>
     Object.fromEntries(
-      fields.map((f) => [f.name, f.type === 'file' ? null : f.type === 'multiselect' ? [] : ''])
+      fields.map((f) => [
+        f.name,
+        f.type === 'file' ? null : f.type === 'multiselect' ? [] : f.type === 'checkbox' ? false : '',
+      ])
     )
   );
   const [honeypot, setHoneypot] = useState('');
@@ -58,7 +61,13 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
   const [errorMessage, setErrorMessage] = useState('');
 
   function update(name, value) {
-    setValues((v) => ({ ...v, [name]: value }));
+    setValues((v) => {
+      const next = { ...v, [name]: value };
+      // lets one field (e.g. "variant of") prefill/adjust others (e.g. level) when it changes
+      const field = fields.find((f) => f.name === name);
+      const linked = field?.onLinkedChange?.(value, next);
+      return linked ? { ...next, ...linked } : next;
+    });
   }
 
   // warn before an accidental close/navigate loses the submission mid-flight
@@ -86,7 +95,7 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
       (f) => f.type === 'file' && values[f.name] && values[f.name].size > MAX_FILE_BYTES
     );
     if (tooLarge) {
-      setErrorMessage(`${tooLarge.label} is too large, max 5MB.`);
+      setErrorMessage(`${tooLarge.label} is too large, max 15MB.`);
       setStatus('error');
       return;
     }
@@ -98,6 +107,9 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
         if (Array.isArray(value)) {
           // php collects repeated `name[]` fields into an array on the server side
           for (const v of value) body.append(`${name}[]`, v);
+        } else if (typeof value === 'boolean') {
+          // matches a native checkbox's own behaviour: present (and truthy) when checked, absent when not
+          if (value) body.append(name, '1');
         } else if (value != null && value !== '') {
           body.append(name, value);
         }
@@ -123,10 +135,14 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
       {fields.map((f) => {
         // the multiselect holds several interactive controls, so it can't live inside a single <label> like the others
         const Wrapper = f.type === 'multiselect' ? 'div' : 'label';
+        const wrapperClass =
+          f.type === 'checkbox'
+            ? 'filter submit-form__field submit-form__checkbox-field'
+            : 'filter submit-form__field';
         return (
-        <Wrapper key={f.name} className="filter submit-form__field">
+        <Wrapper key={f.name} className={wrapperClass}>
           <span className="filter__label">
-            {f.label}
+            {typeof f.label === 'function' ? f.label(values) : f.label}
             {f.required && ' *'}
           </span>
 
@@ -161,6 +177,12 @@ export default function SubmitForm({ endpoint, fields, submitLabel = 'Submit' })
               value={values[f.name]}
               options={f.options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o))}
               onChange={(v) => update(f.name, v)}
+            />
+          ) : f.type === 'checkbox' ? (
+            <input
+              type="checkbox"
+              checked={values[f.name]}
+              onChange={(e) => update(f.name, e.target.checked)}
             />
           ) : f.type === 'file' ? (
             <input

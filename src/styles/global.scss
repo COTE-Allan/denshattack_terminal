@@ -540,6 +540,21 @@ main {
   }
 }
 
+// native number spinner arrows are square and browser-chrome-styled — they don't suit a pill input, so drop them
+// entirely rather than try to reskin them; the field is still a plain number input, just typed instead of nudged
+.filter__input[type='number'] {
+  // firefox-only; deliberately not also setting the unprefixed `appearance` — some browsers treat
+  // appearance: textfield on a number input as "render/behave like a text input", which drops the
+  // native digits-only keystroke filtering along with the spinner
+  -moz-appearance: textfield;
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
 .filter__reset {
   background: transparent;
   border: 1px solid $color-border;
@@ -1501,6 +1516,31 @@ main {
 .submit-form__multiselect-empty {
   color: $color-text-muted;
   font-size: 0.85rem;
+}
+
+// a checkbox field reads as one inline row (box then caption) instead of the other fields' label-above-input stack
+.submit-form__checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+
+  // overrides the other fields' small uppercase heading style — here it's the checkbox's own caption, read inline
+  .filter__label {
+    order: 2;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.9rem;
+    color: $color-text;
+  }
+
+  input[type='checkbox'] {
+    order: 1;
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+    accent-color: $color-border;
+    cursor: pointer;
+  }
 }
 
 // display:contents so `disabled` can dim the fields via their own opacity

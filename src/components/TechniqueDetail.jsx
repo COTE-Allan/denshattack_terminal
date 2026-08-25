@@ -48,11 +48,18 @@ export default function TechniqueDetail() {
     return techniques.find((t) => t.slug === slugFromPath()) ?? null;
   }, [techniques]);
 
-  // reverse lookup: which skips (base or variant) reference this technique in their own techniqueUsed list
+  // reverse lookup: which skips (base or variant) reference this technique's family — the technique itself, plus
+  // whichever of the base/variants are its siblings, so a variant's usage still surfaces on the base's page and vice versa
   const usedInSkips = useMemo(() => {
-    if (!skips || !technique) return [];
-    return skips.filter((s) => s.techniqueUsed.some((tu) => tu.id === technique.id));
-  }, [skips, technique]);
+    if (!skips || !techniques || !technique) return [];
+
+    const base = technique.variantOfId
+      ? techniques.find((x) => x.id === technique.variantOfId)
+      : technique;
+    const familyIds = new Set([technique.id, base?.id, ...(base?.variants.map((v) => v.id) ?? [])]);
+
+    return skips.filter((s) => s.techniqueUsed.some((tu) => familyIds.has(tu.id)));
+  }, [skips, techniques, technique]);
 
   useEffect(() => {
     if (technique) document.title = `Denshattack Station - ${technique.title}`;

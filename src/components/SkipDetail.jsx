@@ -41,6 +41,12 @@ function SkipMeta({ s, baseTimesave }) {
           <dd>{s.foundBy}</dd>
         </>
       )}
+      {s.trainNeeded && (
+        <>
+          <dt>Train</dt>
+          <dd>{s.trainNeeded} {s.trainRequired ? '(required)' : '(recommended)'}</dd>
+        </>
+      )}
       {s.difficulty && (
         <>
           <dt>Difficulty</dt>

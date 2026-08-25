@@ -50,7 +50,7 @@ function densha_honeypot_tripped( $data ) {
 
 // image upload, restricted to a tight mime whitelist
 
-define( 'DENSHA_MAX_UPLOAD_BYTES', 5 * 1024 * 1024 ); // 5mb
+define( 'DENSHA_MAX_UPLOAD_BYTES', 15 * 1024 * 1024 ); // 15mb
 
 function densha_allowed_image_mimes() {
 	return array(
@@ -72,7 +72,7 @@ function densha_handle_image_upload( $file, $post_id, $meta = array() ) {
 	}
 
 	if ( $file['size'] > DENSHA_MAX_UPLOAD_BYTES ) {
-		return new WP_Error( 'file_too_large', 'File is too large (max 5MB).', array( 'status' => 400 ) );
+		return new WP_Error( 'file_too_large', 'File is too large (max 15MB).', array( 'status' => 400 ) );
 	}
 
 	$allowed = densha_allowed_image_mimes();
@@ -139,6 +139,16 @@ add_action( 'rest_api_init', function () {
 				return new WP_Error( 'missing_name', 'Name is required.', array( 'status' => 400 ) );
 			}
 
+			$found_by = sanitize_text_field( $data['foundBy'] ?? '' );
+			if ( $found_by === '' ) {
+				return new WP_Error( 'missing_found_by', 'Found by is required.', array( 'status' => 400 ) );
+			}
+
+			$description = sanitize_textarea_field( $data['description'] ?? '' );
+			if ( $description === '' ) {
+				return new WP_Error( 'missing_description', 'Description is required.', array( 'status' => 400 ) );
+			}
+
 			$level = sanitize_text_field( $data['level'] ?? '' );
 
 			// levels submit as "1-2-1 adventure awaits!"; the post title only wants the leading code
@@ -161,8 +171,11 @@ add_action( 'rest_api_init', function () {
 			update_field( 'timesave', (int) ( $data['timesave'] ?? 0 ), $post_id );
 			// acf's field name is snake_case even though graphql exposes camelcase — check custom fields > skipdata in wp-admin if this doesn't save
 			update_field( 'youtube_link', esc_url_raw( $data['youtubeLink'] ?? '' ), $post_id );
-			update_field( 'found_by', sanitize_text_field( $data['foundBy'] ?? '' ), $post_id );
-			update_field( 'description', sanitize_textarea_field( $data['description'] ?? '' ), $post_id );
+			update_field( 'found_by', $found_by, $post_id );
+			update_field( 'train_needed', sanitize_text_field( $data['trainNeeded'] ?? '' ), $post_id );
+			// checkbox: present (and truthy) only when checked, see SubmitForm.jsx
+			update_field( 'train_required', ! empty( $data['trainRequired'] ), $post_id );
+			update_field( 'description', $description, $post_id );
 
 			// technique ids picked in the form; optional relationship field, fine to save empty
 			$technique_ids = array_values( array_filter(
@@ -276,6 +289,11 @@ add_action( 'rest_api_init', function () {
 				return new WP_Error( 'missing_name', 'Name is required.', array( 'status' => 400 ) );
 			}
 
+			$description = sanitize_textarea_field( $data['description'] ?? '' );
+			if ( $description === '' ) {
+				return new WP_Error( 'missing_description', 'Description is required.', array( 'status' => 400 ) );
+			}
+
 			$post_id = wp_insert_post( array(
 				'post_type'   => 'technique', // real post_type key registered by acf (singular)
 				'post_status' => 'pending', // awaits review, not public until approved
@@ -289,7 +307,7 @@ add_action( 'rest_api_init', function () {
 			update_field( 'name', $name, $post_id );
 			// acf's field name may be snake_case even though graphql exposes camelcase — check custom fields > techniquedata in wp-admin if this doesn't save
 			update_field( 'youtube_link', esc_url_raw( $data['youtubeLink'] ?? '' ), $post_id );
-			update_field( 'description', sanitize_textarea_field( $data['description'] ?? '' ), $post_id );
+			update_field( 'description', $description, $post_id );
 
 			// "variant of" submits the parent technique's post id (dropdown value), name is just the visible label
 			$variant_of_id = (int) ( $data['variantOf'] ?? 0 );

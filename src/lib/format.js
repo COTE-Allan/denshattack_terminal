@@ -37,8 +37,8 @@ export function formatSeconds(seconds) {
   return `~${h}h ${String(m).padStart(2, '0')}m`;
 }
 
-// how many star icons a difficulty is worth (1-5), 0 if not a usable number
-export function difficultyStarCount(difficulty, max = 5) {
+// how many star icons a difficulty is worth (1-6), 0 if not a usable number
+export function difficultyStarCount(difficulty, max = 6) {
   const n = Number(difficulty);
   if (!Number.isFinite(n) || n <= 0) return 0;
   return Math.min(Math.round(n), max);

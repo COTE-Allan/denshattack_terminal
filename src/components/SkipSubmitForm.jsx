@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import TRAINS from '../data/trains.json';
 import { useSkips, useTechniques } from '../lib/useContent.js';
 import { facet } from '../lib/wp.js';
 import SubmitForm from './SubmitForm.jsx';
@@ -90,6 +91,19 @@ export default function SkipSubmitForm({ endpoint }) {
       label: loadingSkips ? 'Variant of (optional, loading…)' : 'Variant of (optional)',
       type: 'select',
       options: baseSkips.map((s) => ({ value: String(s.databaseId), label: s.title })),
+      // picking a base skip carries over its level/difficulty/train as a starting point (still editable), and
+      // defaults time save to 0 seconds, since a variant's value is a bonus on top of the base's, not a total
+      onLinkedChange: (value, next) => {
+        const parent = baseSkips.find((s) => String(s.databaseId) === value);
+        if (!parent) return null;
+        return {
+          level: parent.level || '',
+          difficulty: parent.difficulty || '',
+          trainNeeded: parent.trainNeeded || '',
+          // only a default: an already-typed bonus (e.g. after switching parents) is left alone
+          timesave: next.timesave === '' ? '0' : next.timesave,
+        };
+      },
     },
     {
       name: 'level',
@@ -102,13 +116,23 @@ export default function SkipSubmitForm({ endpoint }) {
       name: 'difficulty',
       label: 'Difficulty',
       type: 'select',
-      options: ['1', '2', '3', '4', '5'],
+      options: ['1', '2', '3', '4', '5', '6'],
       required: true,
     },
-    { name: 'timesave', label: 'Time save (seconds)', type: 'number', required: true },
+    {
+      name: 'timesave',
+      label: (values) =>
+        values.variantOf
+          ? 'Bonus time save vs. the base skip, in seconds (0 if none)'
+          : 'Time save (seconds)',
+      type: 'number',
+      required: true,
+    },
     { name: 'youtubeLink', label: 'YouTube link', type: 'url', required: true },
-    { name: 'foundBy', label: 'Found by', maxLength: 80, suggestions: foundByNames },
-    { name: 'description', label: 'Description', type: 'textarea', maxLength: 2000 },
+    { name: 'foundBy', label: 'Found by', required: true, maxLength: 80, suggestions: foundByNames },
+    { name: 'trainNeeded', label: 'Train needed (optional)', type: 'select', options: TRAINS },
+    { name: 'trainRequired', label: 'Required (not just recommended)', type: 'checkbox' },
+    { name: 'description', label: 'Description', type: 'textarea', required: true, maxLength: 2000 },
     {
       name: 'techniqueUsed',
       label: loading ? 'Techniques used (optional, loading…)' : 'Techniques used (optional)',

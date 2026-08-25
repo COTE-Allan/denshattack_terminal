@@ -47,6 +47,8 @@ const SKIP_DATA_FIELDS = `
   timesave
   youtubeLink
   foundBy
+  trainNeeded
+  trainRequired
 `;
 
 const SKIPS = /* GraphQL */ `
@@ -249,6 +251,8 @@ async function fetchSkips() {
       timesave: d.timesave == null || d.timesave === '' ? null : Number(d.timesave),
       youtubeLink: d.youtubeLink || '',
       foundBy: (d.foundBy || '').trim(),
+      trainNeeded: d.trainNeeded == null || d.trainNeeded === '' ? '' : String(d.trainNeeded),
+      trainRequired: !!d.trainRequired,
       techniqueUsed: (d.techniqueUsed?.nodes ?? []).map((t) => ({
         id: t.id,
         slug: t.slug || '',
